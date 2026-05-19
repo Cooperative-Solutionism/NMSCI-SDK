@@ -2,7 +2,7 @@ import { MsgType } from './types';
 import type { Pubkey, Signature, UUID } from '../core/types';
 import { concat, fromHex, uuidToBytes, toBytesBigEndian } from '../core/encoding';
 
-/** 115-byte Central Pubkey Locked message */
+/** 115-byte Central Pubkey Locked message (协议定义为187字节) */
 export interface CentralPubkeyLockedMessage {
   msgType: MsgType.CENTRAL_KEY_FREEZE;
   uuid: UUID;
@@ -49,6 +49,7 @@ export function buildCentralPubkeyLockedPayload(params: {
 
 /**
  * Build the 115-byte full payload (for centralSignature).
+ * 协议定义完整冻结信息 = 2+16+33+64+8+64 = 187字节
  */
 export function buildCentralPubkeyLockedFullPayload(params: {
   uuid: UUID;

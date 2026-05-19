@@ -4,7 +4,7 @@ import { concat, fromHex, uuidToBytes, toBytesBigEndian, toHex } from '../core/e
 import { signData } from '../core/crypto';
 import { calculateTargetFromNBits, mineNonce } from '../core/pow';
 
-/** 269-byte Transaction Mount message */
+/** 269-byte Transaction Mount message (协议定义为341字节) */
 export interface TransactionMountMessage {
   msgType: MsgType.TRANSACTION_MOUNT;
   uuid: UUID;
@@ -45,6 +45,7 @@ export function serializeTransactionMount(msg: TransactionMountMessage): Uint8Ar
 /**
  * Build the 141-byte pre-signature payload (msgType + uuid + mountedTxId + difficulty + nonce + 3 pubkeys).
  * Used for consumeNodeSignature and flowNodeSignature.
+ * 协议定义：前8项数据 = 2+16+16+4+4+33+33+33 = 141字节
  */
 export function buildTransactionMountPayload(params: {
   uuid: UUID;
@@ -69,6 +70,7 @@ export function buildTransactionMountPayload(params: {
 
 /**
  * Build the 269-byte full payload (for centralSignature).
+ * 协议定义完整交易挂载 = 2+16+16+4+4+33+33+33+64+64+8+64 = 341字节
  */
 export function buildTransactionMountFullPayload(params: {
   uuid: UUID;
@@ -99,7 +101,7 @@ export function buildTransactionMountFullPayload(params: {
 
 /**
  * Mine the PoW nonce for a transaction mount.
- * The nonce field occupies bytes 38-41 of the 141-byte payload.
+ * The nonce field occupies bytes 42-45 of the 141-byte payload.
  */
 export async function mineTransactionMountNonce(
   noncePrefix: Uint8Array,

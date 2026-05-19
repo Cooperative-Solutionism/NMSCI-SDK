@@ -4,7 +4,7 @@ import { concat, fromHex, toHex, uuidToBytes, toBytesBigEndian } from '../core/e
 import { signData } from '../core/crypto';
 import { calculateTargetFromNBits, doubleSha256Hex, compareHex, mineNonce } from '../core/pow';
 
-/** 263-byte Transaction Record message */
+/** 263-byte Transaction Record message (协议定义为335字节) */
 export interface TransactionRecordMessage {
   msgType: MsgType.TRANSACTION_RECORD;
   uuid: UUID;
@@ -45,8 +45,9 @@ export function serializeTransactionRecord(msg: TransactionRecordMessage): Uint8
 }
 
 /**
- * Build the 135-byte pre-signature payload (msgType + uuid + amount + currencyType + difficulty + nonce + 3 pubkeys).
+ * Build the 141-byte pre-signature payload (msgType + uuid + amount + currencyType + difficulty + nonce + 3 pubkeys).
  * Used for consumeNodeSignature and flowNodeSignature.
+ * 协议定义：前9项数据 = 2+16+8+2+4+4+33+33+33 = 141字节
  */
 export function buildTransactionRecordPayload(params: {
   uuid: UUID;
@@ -73,6 +74,7 @@ export function buildTransactionRecordPayload(params: {
 
 /**
  * Build the 263-byte full payload (for centralSignature).
+ * 协议定义完整交易记录 = 2+16+8+2+4+4+33+33+33+64+64+8+64 = 335字节
  */
 export function buildTransactionRecordFullPayload(params: {
   uuid: UUID;
@@ -105,7 +107,7 @@ export function buildTransactionRecordFullPayload(params: {
 
 /**
  * Mine the PoW nonce for a transaction record.
- * The nonce field occupies bytes 32-35 of the 135-byte payload.
+ * The nonce field occupies bytes 38-41 of the 141-byte payload.
  */
 export async function mineTransactionRecordNonce(
   noncePrefix: Uint8Array,
@@ -121,7 +123,7 @@ export async function signTransactionRecordPayload(
   payload: Uint8Array,
   privateKeyHex: string,
 ): Promise<Signature> {
-  if (payload.length !== 135) throw new Error(`Payload must be 135 bytes, got ${payload.length}`);
+  if (payload.length !== 141) throw new Error(`Transaction Record payload must be 141 bytes, got ${payload.length}`);
   const sig = await signData(payload, privateKeyHex);
   return toHex(sig) as Signature;
 }
