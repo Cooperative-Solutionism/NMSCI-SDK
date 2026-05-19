@@ -5,9 +5,9 @@ export type CentralPubkeyLockedMsgResponse = ApiResponse<CentralPubkeyLockedMsg>
 
 export async function sendCentralPubkeyLockedMsg(
   client: ApiClient,
-  body: number[],
-): Promise<ApiResponse<void>> {
-  return client.post<void>('/central-pubkey-locked-msg/send', body);
+  body: Uint8Array | number[],
+): Promise<void> {
+  return client.postBinaryNoResponse('/central-pubkey-locked-msg/send', body);
 }
 
 export async function getCentralPubkeyLockedMsgById(

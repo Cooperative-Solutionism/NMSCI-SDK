@@ -5,9 +5,9 @@ export type FlowNodeRegisterMsgResponse = ApiResponse<FlowNodeRegisterMsg>;
 
 export async function sendFlowNodeRegisterMsg(
   client: ApiClient,
-  body: number[],
+  body: Uint8Array | number[],
 ): Promise<ApiResponse<FlowNodeRegisterMsg>> {
-  return client.post<FlowNodeRegisterMsg>('/flow-node-register-msg/send', body);
+  return client.postBinary<FlowNodeRegisterMsg>('/flow-node-register-msg/send', body);
 }
 
 export async function getFlowNodeRegisterMsgById(

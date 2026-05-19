@@ -6,9 +6,9 @@ export type TransactionRecordMsgListResponse = ApiResponse<TransactionRecordMsg[
 
 export async function sendTransactionRecordMsg(
   client: ApiClient,
-  body: number[],
+  body: Uint8Array | number[],
 ): Promise<ApiResponse<TransactionRecordMsg>> {
-  return client.post<TransactionRecordMsg>('/transaction-record-msg/send', body);
+  return client.postBinary<TransactionRecordMsg>('/transaction-record-msg/send', body);
 }
 
 export async function getTransactionRecordMsgById(

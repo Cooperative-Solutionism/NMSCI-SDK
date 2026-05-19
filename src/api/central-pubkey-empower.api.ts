@@ -5,9 +5,9 @@ export type CentralPubkeyEmpowerMsgResponse = ApiResponse<CentralPubkeyEmpowerMs
 
 export async function sendCentralPubkeyEmpowerMsg(
   client: ApiClient,
-  body: number[],
+  body: Uint8Array | number[],
 ): Promise<ApiResponse<CentralPubkeyEmpowerMsg>> {
-  return client.post<CentralPubkeyEmpowerMsg>('/central-pubkey-empower-msg/send', body);
+  return client.postBinary<CentralPubkeyEmpowerMsg>('/central-pubkey-empower-msg/send', body);
 }
 
 export async function getCentralPubkeyEmpowerMsgById(

@@ -49,6 +49,41 @@ export class ApiClient {
     return response.json() as Promise<ApiResponse<T>>;
   }
 
+  async postBinary<T>(path: string, body: Uint8Array | number[]): Promise<ApiResponse<T>> {
+    const url = `${this.baseUrl}${path}`;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/octet-stream',
+    };
+    if (this.authToken) {
+      headers['Authorization'] = `Bearer ${this.authToken}`;
+    }
+    const response = await this.fetchWithTimeout(url, {
+      method: 'POST',
+      headers,
+      body: body instanceof Uint8Array
+        ? (body.buffer as ArrayBuffer)
+        : (new Uint8Array(body).buffer as ArrayBuffer),
+    });
+    return response.json() as Promise<ApiResponse<T>>;
+  }
+
+  async postBinaryNoResponse(path: string, body: Uint8Array | number[]): Promise<void> {
+    const url = `${this.baseUrl}${path}`;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/octet-stream',
+    };
+    if (this.authToken) {
+      headers['Authorization'] = `Bearer ${this.authToken}`;
+    }
+    await this.fetchWithTimeout(url, {
+      method: 'POST',
+      headers,
+      body: body instanceof Uint8Array
+        ? (body.buffer as ArrayBuffer)
+        : (new Uint8Array(body).buffer as ArrayBuffer),
+    });
+  }
+
   private buildHeaders(): Record<string, string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',

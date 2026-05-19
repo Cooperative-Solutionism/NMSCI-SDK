@@ -6,9 +6,9 @@ export type TransactionMountMsgListResponse = ApiResponse<TransactionMountMsg[]>
 
 export async function sendTransactionMountMsg(
   client: ApiClient,
-  body: number[],
+  body: Uint8Array | number[],
 ): Promise<ApiResponse<TransactionMountMsg>> {
-  return client.post<TransactionMountMsg>('/transaction-mount-msg/send', body);
+  return client.postBinary<TransactionMountMsg>('/transaction-mount-msg/send', body);
 }
 
 export async function getTransactionMountMsgById(
@@ -21,8 +21,8 @@ export async function getTransactionMountMsgById(
 export async function getTransactionMountMsgByMountedTransactionRecordId(
   client: ApiClient,
   id: string,
-): Promise<ApiResponse<TransactionMountMsg>> {
-  return client.get<TransactionMountMsg>(`/transaction-mount-msg/mounted-transaction-record-id/${id}`);
+): Promise<ApiResponse<TransactionMountMsg[]>> {
+  return client.get<TransactionMountMsg[]>(`/transaction-mount-msg/mounted-transaction-record-id/${id}`);
 }
 
 export async function getTransactionMountMsgByConsumeNodePubkey(

@@ -5,9 +5,9 @@ export type FlowNodeLockedMsgResponse = ApiResponse<FlowNodeLockedMsg>;
 
 export async function sendFlowNodeLockedMsg(
   client: ApiClient,
-  body: number[],
+  body: Uint8Array | number[],
 ): Promise<ApiResponse<FlowNodeLockedMsg>> {
-  return client.post<FlowNodeLockedMsg>('/flow-node-locked-msg/send', body);
+  return client.postBinary<FlowNodeLockedMsg>('/flow-node-locked-msg/send', body);
 }
 
 export async function getFlowNodeLockedMsgById(
