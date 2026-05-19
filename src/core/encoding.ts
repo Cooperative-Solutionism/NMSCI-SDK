@@ -1,0 +1,83 @@
+/**
+ * Big-endian byte encoding utilities.
+ * All integer conversions use big-endian per the NMSCI protocol spec.
+ */
+
+export function toBytesBigEndian(value: number | bigint, byteLength: number): Uint8Array {
+  const buffer = new ArrayBuffer(byteLength);
+  const view = new DataView(buffer);
+  if (byteLength === 2) {
+    view.setUint16(0, Number(value), false);
+  } else if (byteLength === 4) {
+    view.setUint32(0, Number(value), false);
+  } else if (byteLength === 8) {
+    view.setBigUint64(0, BigInt(value), false);
+  } else {
+    throw new Error(`Unsupported byte length: ${byteLength}`);
+  }
+  return new Uint8Array(buffer);
+}
+
+export function uuidToBytes(uuid: string): Uint8Array {
+  const clean = uuid.replace(/-/g, '');
+  if (clean.length !== 32) {
+    throw new Error(`Invalid UUID: expected 32 hex chars, got ${clean.length}`);
+  }
+  return fromHex(clean);
+}
+
+export function bytesToUuid(bytes: Uint8Array): string {
+  if (bytes.length !== 16) {
+    throw new Error(`Expected 16 bytes for UUID, got ${bytes.length}`);
+  }
+  return toHex(bytes);
+}
+
+export function toHex(bytes: Uint8Array): string {
+  return Array.from(bytes)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+export function fromHex(hex: string): Uint8Array {
+  const clean = hex.replace(/^0x/, '');
+  if (clean.length % 2 !== 0) {
+    throw new Error(`Invalid hex string: odd length (${clean.length})`);
+  }
+  const bytes = new Uint8Array(clean.length / 2);
+  for (let i = 0; i < clean.length; i += 2) {
+    bytes[i / 2] = parseInt(clean.substring(i, i + 2), 16);
+  }
+  return bytes;
+}
+
+export function concat(...arrays: Uint8Array[]): Uint8Array {
+  const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0);
+  const result = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const arr of arrays) {
+    result.set(arr, offset);
+    offset += arr.length;
+  }
+  return result;
+}
+
+export function bytesToUint16(bytes: Uint8Array): number {
+  if (bytes.length !== 2) throw new Error(`Expected 2 bytes, got ${bytes.length}`);
+  return new DataView(bytes.buffer, bytes.byteOffset, 2).getUint16(0, false);
+}
+
+export function bytesToUint32(bytes: Uint8Array): number {
+  if (bytes.length !== 4) throw new Error(`Expected 4 bytes, got ${bytes.length}`);
+  return new DataView(bytes.buffer, bytes.byteOffset, 4).getUint32(0, false);
+}
+
+export function bytesToBigUint64(bytes: Uint8Array): bigint {
+  if (bytes.length !== 8) throw new Error(`Expected 8 bytes, got ${bytes.length}`);
+  return new DataView(bytes.buffer, bytes.byteOffset, 8).getBigUint64(0, false);
+}
+
+export function bytesToBigInt64(bytes: Uint8Array): bigint {
+  if (bytes.length !== 8) throw new Error(`Expected 8 bytes, got ${bytes.length}`);
+  return new DataView(bytes.buffer, bytes.byteOffset, 8).getBigInt64(0, false);
+}

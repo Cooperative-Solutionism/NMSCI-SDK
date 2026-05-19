@@ -1,0 +1,13 @@
+export enum MsgType {
+  FLOW_NODE_REGISTRATION = 0,
+  CENTRAL_KEY_AUTH = 1,
+  CENTRAL_KEY_FREEZE = 2,
+  FLOW_NODE_FREEZE = 3,
+  TRANSACTION_RECORD = 4,
+  TRANSACTION_MOUNT = 5,
+}
+
+export enum CurrencyType {
+  GOLD_MICROGRAM = 0,
+  RMB_CENT = 1,
+}
