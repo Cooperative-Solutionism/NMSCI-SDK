@@ -4,7 +4,7 @@ import { concat, fromHex, toHex, uuidToBytes, toBytesBigEndian } from '../core/e
 import { signData } from '../core/crypto';
 import { calculateTargetFromNBits, doubleSha256Hex, compareHex, mineNonce } from '../core/pow';
 
-/** 263-byte Transaction Record message (协议定义为335字节) */
+/** 335-byte Transaction Record message (协议定义为335字节) */
 export interface TransactionRecordMessage {
   msgType: MsgType.TRANSACTION_RECORD;
   uuid: UUID;
@@ -45,9 +45,9 @@ export function serializeTransactionRecord(msg: TransactionRecordMessage): Uint8
 }
 
 /**
- * Build the 141-byte pre-signature payload (msgType + uuid + amount + currencyType + difficulty + nonce + 3 pubkeys).
+ * Build the 135-byte pre-signature payload (msgType + uuid + amount + currencyType + difficulty + nonce + 3 pubkeys).
  * Used for consumeNodeSignature and flowNodeSignature.
- * 协议定义：前9项数据 = 2+16+8+2+4+4+33+33+33 = 141字节
+ * 协议定义：前9项数据 = 2+16+8+2+4+4+33+33+33 = 135字节
  */
 export function buildTransactionRecordPayload(params: {
   uuid: UUID;
@@ -73,8 +73,8 @@ export function buildTransactionRecordPayload(params: {
 }
 
 /**
- * Build the 263-byte full payload (for centralSignature).
- * 协议定义完整交易记录 = 2+16+8+2+4+4+33+33+33+64+64+8+64 = 335字节
+ * Build the 271-byte payload for central signature (前9项 + consumeSig + flowSig + timestamp).
+ * 协议定义完整交易记录 = 135 + 64 + 64 + 8 + 64 = 335字节，中心签名对象为前271字节
  */
 export function buildTransactionRecordFullPayload(params: {
   uuid: UUID;

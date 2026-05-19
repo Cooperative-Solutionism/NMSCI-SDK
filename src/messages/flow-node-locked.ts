@@ -2,7 +2,7 @@ import { MsgType } from './types';
 import type { Pubkey, Signature, UUID } from '../core/types';
 import { concat, fromHex, uuidToBytes, toBytesBigEndian } from '../core/encoding';
 
-/** 148-byte Flow Node Locked message (协议定义为220字节) */
+/** 220-byte Flow Node Locked message (协议定义为220字节) */
 export interface FlowNodeLockedMessage {
   msgType: MsgType.FLOW_NODE_FREEZE;
   uuid: UUID;
@@ -14,7 +14,7 @@ export interface FlowNodeLockedMessage {
 }
 
 /**
- * Build the 148-byte serialized form.
+ * Build the 220-byte serialized form.
  */
 export function serializeFlowNodeLocked(msg: FlowNodeLockedMessage): Uint8Array {
   const flowSig = msg.flowNodeSignature ? fromHex(msg.flowNodeSignature) : new Uint8Array(64);
@@ -52,7 +52,7 @@ export function buildFlowNodeLockedPayload(params: {
 }
 
 /**
- * Build the 148-byte full payload (for centralSignature).
+ * Build the 156-byte payload for central signature (前4项 + flowNodeSig + timestamp).
  * 协议定义完整流转节点冻结 = 2+16+33+33+64+8+64 = 220字节
  */
 export function buildFlowNodeLockedFullPayload(params: {

@@ -2,7 +2,7 @@ import { MsgType } from './types';
 import type { Pubkey, Signature, UUID } from '../core/types';
 import { concat, fromHex, toHex, uuidToBytes, toBytesBigEndian, bytesToUuid, bytesToUint16, bytesToBigInt64 } from '../core/encoding';
 
-/** 148-byte Central Pubkey Empower message (协议定义为220字节) */
+/** 220-byte Central Pubkey Empower message (协议定义为220字节) */
 export interface CentralPubkeyEmpowerMessage {
   msgType: MsgType.CENTRAL_KEY_AUTH;
   uuid: UUID;
@@ -14,7 +14,7 @@ export interface CentralPubkeyEmpowerMessage {
 }
 
 /**
- * Build the 148-byte serialized form.
+ * Build the 220-byte serialized form.
  * If signatures are omitted, the last 128 bytes are zeroed.
  */
 export function serializeCentralPubkeyEmpower(msg: CentralPubkeyEmpowerMessage): Uint8Array {
@@ -53,8 +53,7 @@ export function buildCentralPubkeyEmpowerPayload(params: {
 }
 
 /**
- * Build the 148-byte full payload (msgType + uuid + flowNodePubkey + centralPubkey + flowSig + timestamp).
- * Used for centralSignature.
+ * Build the 156-byte payload for central signature (前4项 + flowNodeSig + timestamp).
  * 协议定义完整公证信息 = 2+16+33+33+64+8+64 = 220字节
  */
 export function buildCentralPubkeyEmpowerFullPayload(params: {
