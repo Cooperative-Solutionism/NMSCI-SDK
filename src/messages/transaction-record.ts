@@ -107,7 +107,7 @@ export function buildTransactionRecordFullPayload(params: {
 
 /**
  * Mine the PoW nonce for a transaction record.
- * The nonce field occupies bytes 38-41 of the 141-byte payload.
+ * The nonce field occupies bytes 32-35 of the 135-byte payload.
  */
 export async function mineTransactionRecordNonce(
   noncePrefix: Uint8Array,
@@ -123,7 +123,7 @@ export async function signTransactionRecordPayload(
   payload: Uint8Array,
   privateKeyHex: string,
 ): Promise<Signature> {
-  if (payload.length !== 141) throw new Error(`Transaction Record payload must be 141 bytes, got ${payload.length}`);
+  if (payload.length !== 135) throw new Error(`Transaction Record payload must be 135 bytes, got ${payload.length}`);
   const sig = await signData(payload, privateKeyHex);
   return toHex(sig) as Signature;
 }
