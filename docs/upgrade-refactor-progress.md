@@ -40,9 +40,13 @@
 ### 阶段六：测试与工程化基线
 
 - 新增 `npm run typecheck`。
+- `tsconfig.json` 已启用 `noUnusedLocals`、`noUnusedParameters`、`exactOptionalPropertyTypes`。
 - 新增 Vitest 用例：
   - 编码校验。
+  - secp256k1 签名验签与 Low-S 校验。
+  - PoW target、hex 比较、dblsha256、nonce 挖矿。
   - 6 类消息 pre-sign/submit/full 长度。
+  - 6 类消息 `signXxxPayload` 长度校验。
   - API Client subarray body 裁剪、query 序列化和业务错误。
 - 通过 `npm install` 修复 Rollup optional dependency 缺失问题。
 - `package.json` 增加 `engines.node >=18` 和 `sideEffects: false`。
@@ -62,15 +66,20 @@
 - `package.json` 增加 `./api`、`./messages`、`./protocol` 子路径 exports。
 - `tsup` 调整为多入口构建，并将 `elliptic` 打包进 ESM/CJS 输出，修复 Node ESM 直接导入 CJS 依赖的运行时问题。
 
+### 兼容命名补齐
+
+- 6 类消息均提供 `buildXxxPreSignPayload` 别名。
+- 6 类消息均提供 `signXxxPayload` helper，并按协议常量校验 pre-sign payload 长度。
+
 ## 验证结果
 
 - `git diff --check`：通过。
 - `npm run typecheck`：通过。
-- `npm test`：通过，5 个测试文件、18 个测试用例。
+- `npm test`：通过，8 个测试文件、26 个测试用例。
 - `npm run build`：通过。
 - 子路径 ESM 导入验证：通过，`@nmsci/sdk`、`@nmsci/sdk/api`、`@nmsci/sdk/messages`、`@nmsci/sdk/protocol` 均可由 Node 直接导入。
 
 ## 待继续
 
-- Low-S 验签场景、PoW target 精确测试和真实签名验签测试还可继续补强。
-- 还可以继续补充 `noUnusedLocals`、`noUnusedParameters`、`exactOptionalPropertyTypes` 等更严格 TypeScript 选项。
+- SDK 侧重构计划已完成。
+- 后端协同建议仍需在 `NMSCI` 后端仓库单独处理。

@@ -16,8 +16,8 @@ export interface SdkConfig {
 }
 
 export class ApiClientError<T = unknown> extends Error {
-  readonly status?: number;
-  readonly response?: ApiResponse<T>;
+  readonly status: number | undefined;
+  readonly response: ApiResponse<T> | undefined;
   readonly url: string;
 
   constructor(message: string, options: { url: string; status?: number; response?: ApiResponse<T> }) {
@@ -31,7 +31,7 @@ export class ApiClientError<T = unknown> extends Error {
 
 export class ApiClient {
   private baseUrl: string;
-  private authToken?: string;
+  private authToken: string | undefined;
   private timeout: number;
   private fetchImpl: FetchLike;
 
@@ -60,11 +60,14 @@ export class ApiClient {
 
   async post<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${path}`;
-    return this.request<T>(url, {
+    const init: RequestInit = {
       method: 'POST',
       headers: this.buildHeaders(),
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
+    };
+    if (body !== undefined) {
+      init.body = JSON.stringify(body);
+    }
+    return this.request<T>(url, init);
   }
 
   async postBinary<T>(path: string, body: Uint8Array | number[]): Promise<ApiResponse<T>> {
@@ -134,10 +137,16 @@ export class ApiClient {
     }
 
     if (!response.ok) {
-      throw new ApiClientError(parsed?.message ?? `HTTP request failed with status ${response.status}`, {
+      if (parsed) {
+        throw new ApiClientError(parsed.message || `HTTP request failed with status ${response.status}`, {
+          url,
+          status: response.status,
+          response: parsed,
+        });
+      }
+      throw new ApiClientError(`HTTP request failed with status ${response.status}`, {
         url,
         status: response.status,
-        response: parsed,
       });
     }
 

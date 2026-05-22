@@ -1,4 +1,4 @@
-import type { Pubkey, Signature, UUID, HexString } from '../core/types';
+import type { Pubkey, Signature, HexString } from '../core/types';
 
 export interface FlowNodeRegisterMsgRaw {
   id: string;

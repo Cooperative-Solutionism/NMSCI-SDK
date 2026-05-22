@@ -1,6 +1,8 @@
 import { MsgType } from './types';
 import type { Pubkey, Signature, UUID } from '../core/types';
-import { concat, signatureToBytes, uuidToBytes, toBytesBigEndian, pubkeyToBytes } from '../core/encoding';
+import { concat, signatureToBytes, uuidToBytes, toBytesBigEndian, pubkeyToBytes, toHex } from '../core/encoding';
+import { signData } from '../core/crypto';
+import { MSG_SPECS } from '../protocol/spec';
 
 /** 187-byte Central Pubkey Locked message (协议定义为187字节) */
 export interface CentralPubkeyLockedMessage {
@@ -56,6 +58,18 @@ export function buildCentralPubkeyLockedPayload(params: {
     uuidToBytes(params.uuid),
     pubkeyToBytes(params.centralPubkey),
   );
+}
+
+export const buildCentralPubkeyLockedPreSignPayload = buildCentralPubkeyLockedPayload;
+
+export async function signCentralPubkeyLockedPayload(
+  payload: Uint8Array,
+  privateKeyHex: string,
+): Promise<Signature> {
+  if (payload.length !== MSG_SPECS.CENTRAL_KEY_FREEZE.preSignLength) {
+    throw new Error(`Central pubkey locked payload must be ${MSG_SPECS.CENTRAL_KEY_FREEZE.preSignLength} bytes, got ${payload.length}`);
+  }
+  return toHex(await signData(payload, privateKeyHex)) as Signature;
 }
 
 /**

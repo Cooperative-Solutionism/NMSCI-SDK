@@ -1,6 +1,8 @@
 import { MsgType } from './types';
 import type { Pubkey, Signature, UUID } from '../core/types';
-import { concat, nBitsToBytes, signatureToBytes, uuidToBytes, toBytesBigEndian, pubkeyToBytes } from '../core/encoding';
+import { concat, nBitsToBytes, signatureToBytes, uuidToBytes, toBytesBigEndian, pubkeyToBytes, toHex } from '../core/encoding';
+import { signData } from '../core/crypto';
+import { MSG_SPECS } from '../protocol/spec';
 
 /** 123-byte Flow Node Register message */
 export interface FlowNodeRegisterMessage {
@@ -50,4 +52,16 @@ export function buildFlowNodeRegisterPayload(params: {
     toBytesBigEndian(params.nonce, 4),
     pubkeyToBytes(params.flowNodePubkey),
   );
+}
+
+export const buildFlowNodeRegisterPreSignPayload = buildFlowNodeRegisterPayload;
+
+export async function signFlowNodeRegisterPayload(
+  payload: Uint8Array,
+  privateKeyHex: string,
+): Promise<Signature> {
+  if (payload.length !== MSG_SPECS.FLOW_NODE_REGISTRATION.preSignLength) {
+    throw new Error(`Flow node register payload must be ${MSG_SPECS.FLOW_NODE_REGISTRATION.preSignLength} bytes, got ${payload.length}`);
+  }
+  return toHex(await signData(payload, privateKeyHex)) as Signature;
 }

@@ -3,6 +3,7 @@ import type { Pubkey, Signature, UUID } from '../core/types';
 import { concat, nBitsToBytes, pubkeyToBytes, signatureToBytes, toHex, uuidToBytes, toBytesBigEndian } from '../core/encoding';
 import { signData } from '../core/crypto';
 import { calculateTargetFromNBits, mineNonce } from '../core/pow';
+import { MSG_SPECS } from '../protocol/spec';
 
 /** 335-byte Transaction Record message (协议定义为335字节) */
 export interface TransactionRecordMessage {
@@ -87,6 +88,8 @@ export function buildTransactionRecordPayload(params: {
   );
 }
 
+export const buildTransactionRecordPreSignPayload = buildTransactionRecordPayload;
+
 /**
  * Build the 271-byte payload for central signature (前9项 + consumeSig + flowSig + timestamp).
  * 协议定义完整交易记录 = 135 + 64 + 64 + 8 + 64 = 335字节，中心签名对象为前271字节
@@ -138,7 +141,9 @@ export async function signTransactionRecordPayload(
   payload: Uint8Array,
   privateKeyHex: string,
 ): Promise<Signature> {
-  if (payload.length !== 135) throw new Error(`Transaction Record payload must be 135 bytes, got ${payload.length}`);
+  if (payload.length !== MSG_SPECS.TRANSACTION_RECORD.preSignLength) {
+    throw new Error(`Transaction Record payload must be ${MSG_SPECS.TRANSACTION_RECORD.preSignLength} bytes, got ${payload.length}`);
+  }
   const sig = await signData(payload, privateKeyHex);
   return toHex(sig) as Signature;
 }

@@ -3,6 +3,7 @@ import type { Pubkey, Signature, UUID } from '../core/types';
 import { concat, nBitsToBytes, pubkeyToBytes, signatureToBytes, uuidToBytes, toBytesBigEndian, toHex } from '../core/encoding';
 import { signData } from '../core/crypto';
 import { calculateTargetFromNBits, mineNonce } from '../core/pow';
+import { MSG_SPECS } from '../protocol/spec';
 
 /** 341-byte Transaction Mount message (协议定义为341字节) */
 export interface TransactionMountMessage {
@@ -83,6 +84,8 @@ export function buildTransactionMountPayload(params: {
   );
 }
 
+export const buildTransactionMountPreSignPayload = buildTransactionMountPayload;
+
 /**
  * Build the 277-byte payload for central signature (前8项 + consumeSig + flowSig + timestamp).
  * 协议定义完整交易挂载 = 141 + 64 + 64 + 8 + 64 = 341字节，中心签名对象为前277字节
@@ -132,7 +135,9 @@ export async function signTransactionMountPayload(
   payload: Uint8Array,
   privateKeyHex: string,
 ): Promise<Signature> {
-  if (payload.length !== 141) throw new Error(`Mount payload must be 141 bytes, got ${payload.length}`);
+  if (payload.length !== MSG_SPECS.TRANSACTION_MOUNT.preSignLength) {
+    throw new Error(`Mount payload must be ${MSG_SPECS.TRANSACTION_MOUNT.preSignLength} bytes, got ${payload.length}`);
+  }
   const sig = await signData(payload, privateKeyHex);
   return toHex(sig) as Signature;
 }

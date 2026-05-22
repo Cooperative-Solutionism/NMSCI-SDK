@@ -1,6 +1,8 @@
 import { MsgType } from './types';
 import type { Pubkey, Signature, UUID } from '../core/types';
-import { concat, signatureToBytes, uuidToBytes, toBytesBigEndian, pubkeyToBytes } from '../core/encoding';
+import { concat, signatureToBytes, uuidToBytes, toBytesBigEndian, pubkeyToBytes, toHex } from '../core/encoding';
+import { signData } from '../core/crypto';
+import { MSG_SPECS } from '../protocol/spec';
 
 /** 220-byte Flow Node Locked message (协议定义为220字节) */
 export interface FlowNodeLockedMessage {
@@ -60,6 +62,18 @@ export function buildFlowNodeLockedPayload(params: {
     pubkeyToBytes(params.flowNodePubkey),
     pubkeyToBytes(params.centralPubkey),
   );
+}
+
+export const buildFlowNodeLockedPreSignPayload = buildFlowNodeLockedPayload;
+
+export async function signFlowNodeLockedPayload(
+  payload: Uint8Array,
+  privateKeyHex: string,
+): Promise<Signature> {
+  if (payload.length !== MSG_SPECS.FLOW_NODE_FREEZE.preSignLength) {
+    throw new Error(`Flow node locked payload must be ${MSG_SPECS.FLOW_NODE_FREEZE.preSignLength} bytes, got ${payload.length}`);
+  }
+  return toHex(await signData(payload, privateKeyHex)) as Signature;
 }
 
 /**

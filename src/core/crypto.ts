@@ -1,5 +1,5 @@
 import { ec as EC } from 'elliptic';
-import { toHex, fromHex, pubkeyToBytes, signatureToBytes } from './encoding';
+import { toHex, pubkeyToBytes, signatureToBytes } from './encoding';
 import { doubleSha256, doubleSha256Hex } from './hash';
 
 const ec = new EC('secp256k1');
