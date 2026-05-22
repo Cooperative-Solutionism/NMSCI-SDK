@@ -17,7 +17,7 @@ export async function getConsumeChainById(
   client: ApiClient,
   id: string,
 ): Promise<ApiResponse<ConsumeChainResponseDTO>> {
-  return client.get<ConsumeChainResponseDTO>(`/consume-chain/id/${id}`);
+  return client.get<ConsumeChainResponseDTO>(`/consume-chain/id/${encodeURIComponent(id)}`);
 }
 
 export async function getConsumeChainByStart(
@@ -25,8 +25,8 @@ export async function getConsumeChainByStart(
   start: string,
   isLoop?: boolean,
 ): Promise<ApiResponse<ConsumeChainResponseDTO[]>> {
-  const params: Record<string, string> = { start };
-  if (isLoop !== undefined) params['isLoop'] = String(isLoop);
+  const params: Record<string, string | boolean> = { start };
+  if (isLoop !== undefined) params['isLoop'] = isLoop;
   return client.get<ConsumeChainResponseDTO[]>('/consume-chain/by-start', params);
 }
 
@@ -35,7 +35,7 @@ export async function getConsumeChainByEnd(
   end: string,
   isLoop?: boolean,
 ): Promise<ApiResponse<ConsumeChainResponseDTO[]>> {
-  const params: Record<string, string> = { end };
-  if (isLoop !== undefined) params['isLoop'] = String(isLoop);
+  const params: Record<string, string | boolean> = { end };
+  if (isLoop !== undefined) params['isLoop'] = isLoop;
   return client.get<ConsumeChainResponseDTO[]>('/consume-chain/by-end', params);
 }

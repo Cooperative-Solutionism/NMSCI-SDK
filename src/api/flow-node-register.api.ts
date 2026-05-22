@@ -14,12 +14,12 @@ export async function getFlowNodeRegisterMsgById(
   client: ApiClient,
   id: string,
 ): Promise<ApiResponse<FlowNodeRegisterMsg>> {
-  return client.get<FlowNodeRegisterMsg>(`/flow-node-register-msg/id/${id}`);
+  return client.get<FlowNodeRegisterMsg>(`/flow-node-register-msg/id/${encodeURIComponent(id)}`);
 }
 
 export async function getFlowNodeRegisterMsgByFlowNodePubkey(
   client: ApiClient,
   flowNodePubkey: string,
 ): Promise<ApiResponse<FlowNodeRegisterMsg>> {
-  return client.get<FlowNodeRegisterMsg>(`/flow-node-register-msg/flow-node-pubkey/${flowNodePubkey}`);
+  return client.get<FlowNodeRegisterMsg>(`/flow-node-register-msg/flow-node-pubkey/${encodeURIComponent(flowNodePubkey)}`);
 }

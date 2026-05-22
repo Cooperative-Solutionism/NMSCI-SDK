@@ -5,21 +5,41 @@ export interface ApiResponse<T = unknown> {
   data: T;
 }
 
+export type QueryParams = Record<string, string | number | boolean | undefined>;
+export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
+
 export interface SdkConfig {
   baseUrl: string;
   authToken?: string;
   timeout?: number;
+  fetch?: FetchLike;
+}
+
+export class ApiClientError<T = unknown> extends Error {
+  readonly status?: number;
+  readonly response?: ApiResponse<T>;
+  readonly url: string;
+
+  constructor(message: string, options: { url: string; status?: number; response?: ApiResponse<T> }) {
+    super(message);
+    this.name = 'ApiClientError';
+    this.url = options.url;
+    this.status = options.status;
+    this.response = options.response;
+  }
 }
 
 export class ApiClient {
   private baseUrl: string;
   private authToken?: string;
   private timeout: number;
+  private fetchImpl: FetchLike;
 
   constructor(config: SdkConfig) {
     this.baseUrl = config.baseUrl.replace(/\/+$/, '');
     this.authToken = config.authToken;
     this.timeout = config.timeout ?? 15000;
+    this.fetchImpl = config.fetch ?? fetch;
   }
 
   setAuthToken(token: string): void {
@@ -30,63 +50,44 @@ export class ApiClient {
     this.authToken = undefined;
   }
 
-  async get<T>(path: string, params?: Record<string, string>): Promise<ApiResponse<T>> {
+  async get<T>(path: string, params?: QueryParams): Promise<ApiResponse<T>> {
     const url = this.buildUrl(path, params);
-    const response = await this.fetchWithTimeout(url, {
+    return this.request<T>(url, {
       method: 'GET',
       headers: this.buildHeaders(),
     });
-    return response.json() as Promise<ApiResponse<T>>;
   }
 
   async post<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${path}`;
-    const response = await this.fetchWithTimeout(url, {
+    return this.request<T>(url, {
       method: 'POST',
       headers: this.buildHeaders(),
-      body: body ? JSON.stringify(body) : undefined,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
     });
-    return response.json() as Promise<ApiResponse<T>>;
   }
 
   async postBinary<T>(path: string, body: Uint8Array | number[]): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${path}`;
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/octet-stream',
-    };
-    if (this.authToken) {
-      headers['Authorization'] = `Bearer ${this.authToken}`;
-    }
-    const response = await this.fetchWithTimeout(url, {
+    return this.request<T>(url, {
       method: 'POST',
-      headers,
-      body: body instanceof Uint8Array
-        ? (body.buffer as ArrayBuffer)
-        : (new Uint8Array(body).buffer as ArrayBuffer),
+      headers: this.buildHeaders('application/octet-stream'),
+      body: this.toRequestBody(body),
     });
-    return response.json() as Promise<ApiResponse<T>>;
   }
 
   async postBinaryNoResponse(path: string, body: Uint8Array | number[]): Promise<void> {
     const url = `${this.baseUrl}${path}`;
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/octet-stream',
-    };
-    if (this.authToken) {
-      headers['Authorization'] = `Bearer ${this.authToken}`;
-    }
-    await this.fetchWithTimeout(url, {
+    await this.request<void>(url, {
       method: 'POST',
-      headers,
-      body: body instanceof Uint8Array
-        ? (body.buffer as ArrayBuffer)
-        : (new Uint8Array(body).buffer as ArrayBuffer),
-    });
+      headers: this.buildHeaders('application/octet-stream'),
+      body: this.toRequestBody(body),
+    }, true);
   }
 
-  private buildHeaders(): Record<string, string> {
+  private buildHeaders(contentType: string = 'application/json'): Record<string, string> {
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+      'Content-Type': contentType,
     };
     if (this.authToken) {
       headers['Authorization'] = `Bearer ${this.authToken}`;
@@ -94,20 +95,75 @@ export class ApiClient {
     return headers;
   }
 
-  private buildUrl(path: string, params?: Record<string, string>): string {
+  private buildUrl(path: string, params?: QueryParams): string {
     let url = `${this.baseUrl}${path}`;
     if (params) {
-      const qs = new URLSearchParams(params).toString();
+      const qs = new URLSearchParams(
+        Object.entries(params)
+          .filter((entry): entry is [string, string | number | boolean] => entry[1] !== undefined)
+          .map(([key, value]) => [key, String(value)]),
+      ).toString();
       if (qs) url += `?${qs}`;
     }
     return url;
+  }
+
+  private toRequestBody(body: Uint8Array | number[]): ArrayBuffer {
+    const bytes = body instanceof Uint8Array ? body : new Uint8Array(body);
+    const sliced = new Uint8Array(bytes.byteLength);
+    sliced.set(bytes);
+    return sliced.buffer;
+  }
+
+  private async request<T>(url: string, init: RequestInit, allowEmpty: true): Promise<void>;
+  private async request<T>(url: string, init: RequestInit, allowEmpty?: false): Promise<ApiResponse<T>>;
+  private async request<T>(url: string, init: RequestInit, allowEmpty = false): Promise<ApiResponse<T> | void> {
+    const response = await this.fetchWithTimeout(url, init);
+    const text = await response.text();
+
+    let parsed: ApiResponse<T> | undefined;
+    if (text) {
+      try {
+        parsed = JSON.parse(text) as ApiResponse<T>;
+      } catch (e) {
+        throw new ApiClientError(`Invalid JSON response: ${e instanceof Error ? e.message : String(e)}`, {
+          url,
+          status: response.status,
+        });
+      }
+    }
+
+    if (!response.ok) {
+      throw new ApiClientError(parsed?.message ?? `HTTP request failed with status ${response.status}`, {
+        url,
+        status: response.status,
+        response: parsed,
+      });
+    }
+
+    if (!parsed) {
+      if (allowEmpty) {
+        return;
+      }
+      throw new ApiClientError('Empty JSON response', { url, status: response.status });
+    }
+
+    if (parsed.code !== 200) {
+      throw new ApiClientError(parsed.message || `API request failed with code ${parsed.code}`, {
+        url,
+        status: response.status,
+        response: parsed,
+      });
+    }
+
+    return parsed;
   }
 
   private async fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeout);
     try {
-      return await fetch(url, { ...init, signal: controller.signal });
+      return await this.fetchImpl(url, { ...init, signal: controller.signal });
     } finally {
       clearTimeout(timer);
     }

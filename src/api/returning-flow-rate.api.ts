@@ -13,11 +13,11 @@ export async function getReturningFlowRateById(
     currencyType?: number;
   },
 ): Promise<ApiResponse<ReturningFlowRateResponseDTO>> {
-  const query: Record<string, string> = { targetId: params.targetId };
+  const query: Record<string, string | number> = { targetId: params.targetId };
   if (params.sourceId) query['sourceId'] = params.sourceId;
-  if (params.startTime !== undefined) query['startTime'] = String(params.startTime);
-  if (params.endTime !== undefined) query['endTime'] = String(params.endTime);
-  if (params.currencyType !== undefined) query['currencyType'] = String(params.currencyType);
+  if (params.startTime !== undefined) query['startTime'] = params.startTime;
+  if (params.endTime !== undefined) query['endTime'] = params.endTime;
+  if (params.currencyType !== undefined) query['currencyType'] = params.currencyType;
   return client.get<ReturningFlowRateResponseDTO>('/returning-flow-rate/by-id', query);
 }
 
@@ -31,10 +31,10 @@ export async function getReturningFlowRateByPubkey(
     currencyType?: number;
   },
 ): Promise<ApiResponse<ReturningFlowRateResponseDTO>> {
-  const query: Record<string, string> = { target: params.target };
+  const query: Record<string, string | number> = { target: params.target };
   if (params.source) query['source'] = params.source;
-  if (params.startTime !== undefined) query['startTime'] = String(params.startTime);
-  if (params.endTime !== undefined) query['endTime'] = String(params.endTime);
-  if (params.currencyType !== undefined) query['currencyType'] = String(params.currencyType);
+  if (params.startTime !== undefined) query['startTime'] = params.startTime;
+  if (params.endTime !== undefined) query['endTime'] = params.endTime;
+  if (params.currencyType !== undefined) query['currencyType'] = params.currencyType;
   return client.get<ReturningFlowRateResponseDTO>('/returning-flow-rate/by-pubkey', query);
 }

@@ -15,28 +15,28 @@ export async function getTransactionMountMsgById(
   client: ApiClient,
   id: string,
 ): Promise<ApiResponse<TransactionMountMsg>> {
-  return client.get<TransactionMountMsg>(`/transaction-mount-msg/id/${id}`);
+  return client.get<TransactionMountMsg>(`/transaction-mount-msg/id/${encodeURIComponent(id)}`);
 }
 
 export async function getTransactionMountMsgByMountedTransactionRecordId(
   client: ApiClient,
   id: string,
-): Promise<ApiResponse<TransactionMountMsg[]>> {
-  return client.get<TransactionMountMsg[]>(`/transaction-mount-msg/mounted-transaction-record-id/${id}`);
+): Promise<ApiResponse<TransactionMountMsg>> {
+  return client.get<TransactionMountMsg>(`/transaction-mount-msg/mounted-transaction-record-id/${encodeURIComponent(id)}`);
 }
 
 export async function getTransactionMountMsgByConsumeNodePubkey(
   client: ApiClient,
   consumeNodePubkey: string,
 ): Promise<ApiResponse<TransactionMountMsg[]>> {
-  return client.get<TransactionMountMsg[]>(`/transaction-mount-msg/consume-node-pubkey/${consumeNodePubkey}`);
+  return client.get<TransactionMountMsg[]>(`/transaction-mount-msg/consume-node-pubkey/${encodeURIComponent(consumeNodePubkey)}`);
 }
 
 export async function getTransactionMountMsgByFlowNodePubkey(
   client: ApiClient,
   flowNodePubkey: string,
 ): Promise<ApiResponse<TransactionMountMsg[]>> {
-  return client.get<TransactionMountMsg[]>(`/transaction-mount-msg/flow-node-pubkey/${flowNodePubkey}`);
+  return client.get<TransactionMountMsg[]>(`/transaction-mount-msg/flow-node-pubkey/${encodeURIComponent(flowNodePubkey)}`);
 }
 
 export async function getTransactionMountMsgByBothPubkeys(
@@ -44,5 +44,5 @@ export async function getTransactionMountMsgByBothPubkeys(
   consumeNodePubkey: string,
   flowNodePubkey: string,
 ): Promise<ApiResponse<TransactionMountMsg[]>> {
-  return client.get<TransactionMountMsg[]>(`/transaction-mount-msg/${consumeNodePubkey}/${flowNodePubkey}`);
+  return client.get<TransactionMountMsg[]>(`/transaction-mount-msg/${encodeURIComponent(consumeNodePubkey)}/${encodeURIComponent(flowNodePubkey)}`);
 }

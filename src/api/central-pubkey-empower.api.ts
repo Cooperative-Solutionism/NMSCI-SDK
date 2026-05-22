@@ -14,12 +14,12 @@ export async function getCentralPubkeyEmpowerMsgById(
   client: ApiClient,
   id: string,
 ): Promise<ApiResponse<CentralPubkeyEmpowerMsg>> {
-  return client.get<CentralPubkeyEmpowerMsg>(`/central-pubkey-empower-msg/id/${id}`);
+  return client.get<CentralPubkeyEmpowerMsg>(`/central-pubkey-empower-msg/id/${encodeURIComponent(id)}`);
 }
 
 export async function getCentralPubkeyEmpowerMsgByFlowNodePubkey(
   client: ApiClient,
   flowNodePubkey: string,
 ): Promise<ApiResponse<CentralPubkeyEmpowerMsg>> {
-  return client.get<CentralPubkeyEmpowerMsg>(`/central-pubkey-empower-msg/flow-node-pubkey/${flowNodePubkey}`);
+  return client.get<CentralPubkeyEmpowerMsg>(`/central-pubkey-empower-msg/flow-node-pubkey/${encodeURIComponent(flowNodePubkey)}`);
 }

@@ -34,7 +34,7 @@ yarn add @nmsci/sdk
 pnpm add @nmsci/sdk
 ```
 
-> **前置要求**：Node.js >= 16（需要 `crypto.subtle` API），或任何现代浏览器环境。
+> **前置要求**：Node.js >= 18（需要 `crypto.subtle` API），或任何现代浏览器环境。
 
 ---
 
@@ -50,7 +50,7 @@ const { data: block } = await client.get('/block-chain/last');
 console.log('Latest block height:', block.height);
 
 // 发送原始字节数据
-const res = await client.post('/flow-node-register-msg/send', byteArray);
+const res = await client.postBinary('/flow-node-register-msg/send', bytes);
 ```
 
 ---
@@ -75,14 +75,16 @@ const res = await client.post('/flow-node-register-msg/send', byteArray);
 
 ### 消息类型
 
-| 值 | 名称 | 字节数 |
-|----|------|--------|
-| 0 | 流转节点注册信息 | 123 |
-| 1 | 中心公钥公证信息 | 148 |
-| 2 | 中心公钥冻结信息 | 115 |
-| 3 | 流转节点冻结信息 | 148 |
-| 4 | 交易记录信息 | 263 |
-| 5 | 交易挂载信息 | 269 |
+| 值 | 名称 | 协议完整字节数 | 客户端提交字节数 |
+|----|------|---:|---:|
+| 0 | 流转节点注册信息 | 123 | 123 |
+| 1 | 中心公钥公证信息 | 220 | 148 |
+| 2 | 中心公钥冻结信息 | 187 | 115 |
+| 3 | 流转节点冻结信息 | 220 | 148 |
+| 4 | 交易记录信息 | 335 | 263 |
+| 5 | 交易挂载信息 | 341 | 269 |
+
+协议完整消息包含 `confirmTimestamp` 和 `centralSignature`，用于后端存储、区块固定、`rawBytes` 和 `txid`。客户端 POST `/send` 时发送的是提交载荷，后端会补齐中心时间戳和中心签名；因此交易记录的完整消息是 335 字节，但发送给当前后端的是 263 字节。
 
 ### 货币类型
 
@@ -102,7 +104,7 @@ import { ApiClient, type SdkConfig } from '@nmsci/sdk';
 
 const config: SdkConfig = {
   baseUrl: 'http://localhost:8080', // 后端地址
-  authToken: 'Bearer xxx',          // 可选：JWT Token
+  authToken: 'xxx',                 // 可选：裸 JWT Token，SDK 自动添加 Bearer
   timeout: 15000,                   // 可选：请求超时（毫秒），默认 15000
 };
 
@@ -230,7 +232,7 @@ compareHex('0000ffff...', '00010000...'); // -1
 
 ## 消息序列化
 
-每个消息类型都有对应的序列化函数，用于将结构化数据转换为 123~269 字节的 `Uint8Array`，再提交给后端 API。
+每个消息类型都有两类序列化函数：`serializeXxxSubmitPayload` 生成客户端 POST `/send` 使用的提交载荷，`serializeXxxFullMessage` 生成包含中心确认字段的协议完整消息。旧的 `serializeXxx` 仍保留为完整消息兼容别名。
 
 > **关键**：所有签名均基于特定的**预签名载荷**（不含签名字段的字节序列）计算，具体字段分布见各消息说明。
 
@@ -271,8 +273,7 @@ msg.flowNodeSignature = toHex(sig) as Signature;
 const bytes = serializeFlowNodeRegister(msg);
 
 // 5. 提交（ArrayBuffer → number[]）
-const byteArray = Array.from(bytes);
-const res = await client.post('/flow-node-register-msg/send', byteArray);
+const res = await client.postBinary('/flow-node-register-msg/send', bytes);
 ```
 
 **字段布局（123 字节）：**
@@ -286,10 +287,10 @@ const res = await client.post('/flow-node-register-msg/send', byteArray);
 | flowNodePubkey | 33 | 流转节点压缩公钥 |
 | flowNodeSignature | 64 | 流转节点对前5项数据的签名 |
 
-### 中心公钥授权（消息类型 1，148 字节）
+### 中心公钥授权（消息类型 1，完整 220 字节，提交 148 字节）
 
 ```typescript
-import { MsgType, buildCentralPubkeyEmpowerPayload, buildCentralPubkeyEmpowerFullPayload, serializeCentralPubkeyEmpower, signData } from '@nmsci/sdk';
+import { MsgType, buildCentralPubkeyEmpowerPayload, buildCentralPubkeyEmpowerFullPayload, serializeCentralPubkeyEmpowerSubmitPayload, serializeCentralPubkeyEmpowerFullMessage, signData } from '@nmsci/sdk';
 import { fromHex, toHex } from '@nmsci/sdk';
 
 const msg = {
@@ -310,7 +311,7 @@ const prePayload = buildCentralPubkeyEmpowerPayload({
 });
 msg.flowNodeSignature = toHex(await signData(prePayload, flowNodePrivateKey)) as Signature;
 
-// 第二步：中心节点签名（签 fullPayload = 148字节）
+// 后端会生成 confirmTimestamp 和 centralSignature；离线完整消息校验时中心签名对象为 156 字节
 const fullPayload = buildCentralPubkeyEmpowerFullPayload({
   uuid: msg.uuid,
   flowNodePubkey: msg.flowNodePubkey,
@@ -320,14 +321,14 @@ const fullPayload = buildCentralPubkeyEmpowerFullPayload({
 });
 msg.centralSignature = toHex(await signData(fullPayload, centralPrivateKey)) as Signature;
 
-const byteArray = Array.from(serializeCentralPubkeyEmpower(msg));
-await client.post('/central-pubkey-empower-msg/send', byteArray);
+await client.postBinary('/central-pubkey-empower-msg/send', serializeCentralPubkeyEmpowerSubmitPayload(msg));
+const fullBytes = serializeCentralPubkeyEmpowerFullMessage(msg); // 220 字节，用于校验后端 rawBytes
 ```
 
-### 中心公钥冻结（消息类型 2，115 字节）
+### 中心公钥冻结（消息类型 2，完整 187 字节，提交 115 字节）
 
 ```typescript
-import { MsgType, buildCentralPubkeyLockedPayload, buildCentralPubkeyLockedFullPayload, serializeCentralPubkeyLocked, signData } from '@nmsci/sdk';
+import { MsgType, buildCentralPubkeyLockedPayload, buildCentralPubkeyLockedFullPayload, serializeCentralPubkeyLockedSubmitPayload, serializeCentralPubkeyLockedFullMessage, signData } from '@nmsci/sdk';
 
 const msg = {
   msgType: MsgType.CENTRAL_KEY_FREEZE,
@@ -345,7 +346,7 @@ const prePayload = buildCentralPubkeyLockedPayload({
 });
 msg.centralSignaturePre = toHex(await signData(prePayload, centralPrivateKey)) as Signature;
 
-// 完整签名（115字节）
+// 离线完整消息校验时中心签名对象为 123 字节
 const fullPayload = buildCentralPubkeyLockedFullPayload({
   uuid: msg.uuid,
   centralPubkey: msg.centralPubkey,
@@ -354,16 +355,17 @@ const fullPayload = buildCentralPubkeyLockedFullPayload({
 });
 msg.centralSignature = toHex(await signData(fullPayload, centralPrivateKey)) as Signature;
 
-await client.post('/central-pubkey-locked-msg/send', Array.from(serializeCentralPubkeyLocked(msg)));
+await client.postBinary('/central-pubkey-locked-msg/send', serializeCentralPubkeyLockedSubmitPayload(msg));
+const fullBytes = serializeCentralPubkeyLockedFullMessage(msg); // 187 字节，用于校验后端 rawBytes
 // 注意：此接口成功时无响应体（void）
 ```
 
-### 流转节点冻结（消息类型 3，148 字节）
+### 流转节点冻结（消息类型 3，完整 220 字节，提交 148 字节）
 
 与中心公钥授权流程类似，需要流转节点和中心节点双重签名。
 
 ```typescript
-import { MsgType, buildFlowNodeLockedPayload, buildFlowNodeLockedFullPayload, serializeFlowNodeLocked, signData } from '@nmsci/sdk';
+import { MsgType, buildFlowNodeLockedPayload, buildFlowNodeLockedFullPayload, serializeFlowNodeLockedSubmitPayload, serializeFlowNodeLockedFullMessage, signData } from '@nmsci/sdk';
 
 const msg = {
   msgType: MsgType.FLOW_NODE_FREEZE,
@@ -383,7 +385,7 @@ const prePayload = buildFlowNodeLockedPayload({
 });
 msg.flowNodeSignature = toHex(await signData(prePayload, flowNodePrivateKey)) as Signature;
 
-// 中心节点签名（148字节）
+// 离线完整消息校验时中心签名对象为 156 字节
 const fullPayload = buildFlowNodeLockedFullPayload({
   ...msg,
   flowNodeSignature: msg.flowNodeSignature,
@@ -391,10 +393,11 @@ const fullPayload = buildFlowNodeLockedFullPayload({
 });
 msg.centralSignature = toHex(await signData(fullPayload, centralPrivateKey)) as Signature;
 
-await client.post('/flow-node-locked-msg/send', Array.from(serializeFlowNodeLocked(msg)));
+await client.postBinary('/flow-node-locked-msg/send', serializeFlowNodeLockedSubmitPayload(msg));
+const fullBytes = serializeFlowNodeLockedFullMessage(msg); // 220 字节，用于校验后端 rawBytes
 ```
 
-### 交易记录（消息类型 4，263 字节）
+### 交易记录（消息类型 4，完整 335 字节，提交 263 字节）
 
 需要 PoW + 消费节点签名 + 流转节点签名 + 中心节点签名。
 
@@ -402,7 +405,7 @@ await client.post('/flow-node-locked-msg/send', Array.from(serializeFlowNodeLock
 import {
   MsgType, CurrencyType,
   buildTransactionRecordPayload, buildTransactionRecordFullPayload,
-  serializeTransactionRecord,
+  serializeTransactionRecordSubmitPayload, serializeTransactionRecordFullMessage,
   signTransactionRecordPayload, mineTransactionRecordNonce,
 } from '@nmsci/sdk';
 import { fromHex, toHex, toBytesBigEndian, concat } from '@nmsci/sdk';
@@ -455,7 +458,7 @@ const consumeSig = await signTransactionRecordPayload(payload, consumeNodePrivat
 // 流转节点签名
 const flowSig = await signTransactionRecordPayload(payload, flowNodePrivateKey);
 
-// 中心节点签名（基于完整 263 字节载荷）
+// 离线完整消息校验时中心签名对象为 271 字节
 const fullPayload = buildTransactionRecordFullPayload({
   uuid, amount: 10000n, currencyType: CurrencyType.RMB_CENT,
   transactionDifficultyTarget: '0x1effffff', nonce,
@@ -478,10 +481,11 @@ const msg = {
   centralSignature: toHex(centralSig) as Signature,
 };
 
-await client.post('/transaction-record-msg/send', Array.from(serializeTransactionRecord(msg)));
+await client.postBinary('/transaction-record-msg/send', serializeTransactionRecordSubmitPayload(msg));
+const fullBytes = serializeTransactionRecordFullMessage(msg); // 335 字节，用于校验后端 rawBytes
 ```
 
-### 交易挂载（消息类型 5，269 字节）
+### 交易挂载（消息类型 5，完整 341 字节，提交 269 字节）
 
 与交易记录类似，但引用一笔已存在的交易记录 ID 作为起点。
 
@@ -489,7 +493,7 @@ await client.post('/transaction-record-msg/send', Array.from(serializeTransactio
 import {
   MsgType,
   buildTransactionMountPayload, buildTransactionMountFullPayload,
-  serializeTransactionMount,
+  serializeTransactionMountSubmitPayload, serializeTransactionMountFullMessage,
   signTransactionMountPayload, mineTransactionMountNonce,
 } from '@nmsci/sdk';
 import { toBytesBigEndian, concat, fromHex, toHex } from '@nmsci/sdk';
@@ -528,7 +532,7 @@ const payload = buildTransactionMountPayload({
 const consumeSig = await signTransactionMountPayload(payload, consumeNodePrivateKey);
 const flowSig    = await signTransactionMountPayload(payload, flowNodePrivateKey);
 
-// 中心节点签名（269 字节完整载荷）
+// 离线完整消息校验时中心签名对象为 277 字节
 const fullPayload = buildTransactionMountFullPayload({
   uuid, mountedTransactionRecordId: mountedRecordId,
   transactionDifficultyTarget: '0x1effffff', nonce,
@@ -549,7 +553,8 @@ const msg = {
   centralSignature: toHex(centralSig) as Signature,
 };
 
-await client.post('/transaction-mount-msg/send', Array.from(serializeTransactionMount(msg)));
+await client.postBinary('/transaction-mount-msg/send', serializeTransactionMountSubmitPayload(msg));
+const fullBytes = serializeTransactionMountFullMessage(msg); // 341 字节，用于校验后端 rawBytes
 ```
 
 ---
@@ -884,4 +889,4 @@ const block = await safeApiCall(() => client.get('/block-chain/last'));
 | `crypto.subtle` | Chrome 37, Firefox 34, Safari 11, Edge 12 |
 | `crypto.getRandomValues` | 所有现代浏览器 |
 
-如需在旧版浏览器中使用，可引入 `crypto` polyfill（如 `webcrypto-liner`）或使用 Node.js >= 19。
+如需在旧版浏览器中使用，可引入 `crypto` polyfill（如 `webcrypto-liner`）；Node.js 环境建议使用 >= 18。

@@ -1,6 +1,6 @@
 import { MsgType } from './types';
 import type { Pubkey, Signature, UUID } from '../core/types';
-import { concat, fromHex, toHex, uuidToBytes, toBytesBigEndian } from '../core/encoding';
+import { concat, nBitsToBytes, signatureToBytes, uuidToBytes, toBytesBigEndian, pubkeyToBytes } from '../core/encoding';
 
 /** 123-byte Flow Node Register message */
 export interface FlowNodeRegisterMessage {
@@ -17,18 +17,21 @@ export interface FlowNodeRegisterMessage {
  * If flowNodeSignature is omitted, the last 64 bytes are zeroed.
  */
 export function serializeFlowNodeRegister(msg: FlowNodeRegisterMessage): Uint8Array {
-  const difficultyBytes = fromHex(msg.registerDifficultyTarget.padStart(8, '0'));
-  const signature = msg.flowNodeSignature ? fromHex(msg.flowNodeSignature) : new Uint8Array(64);
+  const difficultyBytes = nBitsToBytes(msg.registerDifficultyTarget);
+  const signature = msg.flowNodeSignature ? signatureToBytes(msg.flowNodeSignature) : new Uint8Array(64);
 
   return concat(
     toBytesBigEndian(MsgType.FLOW_NODE_REGISTRATION, 2), // 2 bytes
     uuidToBytes(msg.uuid),                                  // 16 bytes
     difficultyBytes,                                         // 4 bytes
     toBytesBigEndian(msg.nonce, 4),                         // 4 bytes
-    fromHex(msg.flowNodePubkey),                           // 33 bytes
+    pubkeyToBytes(msg.flowNodePubkey),                     // 33 bytes
     signature,                                              // 64 bytes
   );
 }
+
+export const serializeFlowNodeRegisterSubmitPayload = serializeFlowNodeRegister;
+export const serializeFlowNodeRegisterFullMessage = serializeFlowNodeRegister;
 
 /**
  * Build the 59-byte pre-signature payload (msgType + uuid + difficulty + nonce + pubkey).
@@ -43,8 +46,8 @@ export function buildFlowNodeRegisterPayload(params: {
   return concat(
     toBytesBigEndian(MsgType.FLOW_NODE_REGISTRATION, 2),
     uuidToBytes(params.uuid),
-    fromHex(params.registerDifficultyTarget.padStart(8, '0')),
+    nBitsToBytes(params.registerDifficultyTarget),
     toBytesBigEndian(params.nonce, 4),
-    fromHex(params.flowNodePubkey),
+    pubkeyToBytes(params.flowNodePubkey),
   );
 }

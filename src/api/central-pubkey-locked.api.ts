@@ -14,12 +14,12 @@ export async function getCentralPubkeyLockedMsgById(
   client: ApiClient,
   id: string,
 ): Promise<ApiResponse<CentralPubkeyLockedMsg>> {
-  return client.get<CentralPubkeyLockedMsg>(`/central-pubkey-locked-msg/id/${id}`);
+  return client.get<CentralPubkeyLockedMsg>(`/central-pubkey-locked-msg/id/${encodeURIComponent(id)}`);
 }
 
 export async function getCentralPubkeyLockedMsgByCentralPubkey(
   client: ApiClient,
   centralPubkey: string,
 ): Promise<ApiResponse<CentralPubkeyLockedMsg>> {
-  return client.get<CentralPubkeyLockedMsg>(`/central-pubkey-locked-msg/central-pubkey/${centralPubkey}`);
+  return client.get<CentralPubkeyLockedMsg>(`/central-pubkey-locked-msg/central-pubkey/${encodeURIComponent(centralPubkey)}`);
 }

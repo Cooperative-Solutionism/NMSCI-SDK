@@ -12,5 +12,5 @@ export async function getBlockByHeight(client: ApiClient, height: number): Promi
 }
 
 export async function getBlockByHash(client: ApiClient, hash: string): Promise<ApiResponse<BlockInfo>> {
-  return client.get<BlockInfo>(`/block-chain/hash/${hash}`);
+  return client.get<BlockInfo>(`/block-chain/hash/${encodeURIComponent(hash)}`);
 }

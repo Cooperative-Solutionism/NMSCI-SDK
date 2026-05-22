@@ -15,21 +15,21 @@ export async function getTransactionRecordMsgById(
   client: ApiClient,
   id: string,
 ): Promise<ApiResponse<TransactionRecordMsg>> {
-  return client.get<TransactionRecordMsg>(`/transaction-record-msg/id/${id}`);
+  return client.get<TransactionRecordMsg>(`/transaction-record-msg/id/${encodeURIComponent(id)}`);
 }
 
 export async function getTransactionRecordMsgByConsumeNodePubkey(
   client: ApiClient,
   consumeNodePubkey: string,
 ): Promise<ApiResponse<TransactionRecordMsg[]>> {
-  return client.get<TransactionRecordMsg[]>(`/transaction-record-msg/consume-node-pubkey/${consumeNodePubkey}`);
+  return client.get<TransactionRecordMsg[]>(`/transaction-record-msg/consume-node-pubkey/${encodeURIComponent(consumeNodePubkey)}`);
 }
 
 export async function getTransactionRecordMsgByFlowNodePubkey(
   client: ApiClient,
   flowNodePubkey: string,
 ): Promise<ApiResponse<TransactionRecordMsg[]>> {
-  return client.get<TransactionRecordMsg[]>(`/transaction-record-msg/flow-node-pubkey/${flowNodePubkey}`);
+  return client.get<TransactionRecordMsg[]>(`/transaction-record-msg/flow-node-pubkey/${encodeURIComponent(flowNodePubkey)}`);
 }
 
 export async function getTransactionRecordMsgByBothPubkeys(
@@ -37,5 +37,5 @@ export async function getTransactionRecordMsgByBothPubkeys(
   consumeNodePubkey: string,
   flowNodePubkey: string,
 ): Promise<ApiResponse<TransactionRecordMsg[]>> {
-  return client.get<TransactionRecordMsg[]>(`/transaction-record-msg/${consumeNodePubkey}/${flowNodePubkey}`);
+  return client.get<TransactionRecordMsg[]>(`/transaction-record-msg/${encodeURIComponent(consumeNodePubkey)}/${encodeURIComponent(flowNodePubkey)}`);
 }

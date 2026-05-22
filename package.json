@@ -23,10 +23,15 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "prepublishOnly": "npm run build"
   },
+  "engines": {
+    "node": ">=18"
+  },
+  "sideEffects": false,
   "dependencies": {
     "elliptic": "^6.6.1"
   },

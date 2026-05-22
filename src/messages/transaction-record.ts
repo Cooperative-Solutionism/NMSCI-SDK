@@ -1,8 +1,8 @@
 import { MsgType } from './types';
 import type { Pubkey, Signature, UUID } from '../core/types';
-import { concat, fromHex, toHex, uuidToBytes, toBytesBigEndian } from '../core/encoding';
+import { concat, nBitsToBytes, pubkeyToBytes, signatureToBytes, toHex, uuidToBytes, toBytesBigEndian } from '../core/encoding';
 import { signData } from '../core/crypto';
-import { calculateTargetFromNBits, doubleSha256Hex, compareHex, mineNonce } from '../core/pow';
+import { calculateTargetFromNBits, mineNonce } from '../core/pow';
 
 /** 335-byte Transaction Record message (协议定义为335字节) */
 export interface TransactionRecordMessage {
@@ -22,25 +22,40 @@ export interface TransactionRecordMessage {
 }
 
 export function serializeTransactionRecord(msg: TransactionRecordMessage): Uint8Array {
-  const consumeSig = msg.consumeNodeSignature ? fromHex(msg.consumeNodeSignature) : new Uint8Array(64);
-  const flowSig = msg.flowNodeSignature ? fromHex(msg.flowNodeSignature) : new Uint8Array(64);
+  const consumeSig = msg.consumeNodeSignature ? signatureToBytes(msg.consumeNodeSignature) : new Uint8Array(64);
+  const flowSig = msg.flowNodeSignature ? signatureToBytes(msg.flowNodeSignature) : new Uint8Array(64);
   const timestamp = msg.confirmTimestamp != null ? toBytesBigEndian(msg.confirmTimestamp, 8) : new Uint8Array(8);
-  const centralSig = msg.centralSignature ? fromHex(msg.centralSignature) : new Uint8Array(64);
+  const centralSig = msg.centralSignature ? signatureToBytes(msg.centralSignature) : new Uint8Array(64);
 
   return concat(
     toBytesBigEndian(MsgType.TRANSACTION_RECORD, 2),
     uuidToBytes(msg.uuid),
     toBytesBigEndian(msg.amount, 8),
     toBytesBigEndian(msg.currencyType, 2),
-    fromHex(msg.transactionDifficultyTarget.padStart(8, '0')),
+    nBitsToBytes(msg.transactionDifficultyTarget),
     toBytesBigEndian(msg.nonce, 4),
-    fromHex(msg.consumeNodePubkey),
-    fromHex(msg.flowNodePubkey),
-    fromHex(msg.centralPubkey),
+    pubkeyToBytes(msg.consumeNodePubkey),
+    pubkeyToBytes(msg.flowNodePubkey),
+    pubkeyToBytes(msg.centralPubkey),
     consumeSig,
     flowSig,
     timestamp,
     centralSig,
+  );
+}
+
+export const serializeTransactionRecordFullMessage = serializeTransactionRecord;
+
+export function serializeTransactionRecordSubmitPayload(
+  msg: TransactionRecordMessage & {
+    consumeNodeSignature: Signature;
+    flowNodeSignature: Signature;
+  },
+): Uint8Array {
+  return concat(
+    buildTransactionRecordPayload(msg),
+    signatureToBytes(msg.consumeNodeSignature),
+    signatureToBytes(msg.flowNodeSignature),
   );
 }
 
@@ -64,11 +79,11 @@ export function buildTransactionRecordPayload(params: {
     uuidToBytes(params.uuid),
     toBytesBigEndian(params.amount, 8),
     toBytesBigEndian(params.currencyType, 2),
-    fromHex(params.transactionDifficultyTarget.padStart(8, '0')),
+    nBitsToBytes(params.transactionDifficultyTarget),
     toBytesBigEndian(params.nonce, 4),
-    fromHex(params.consumeNodePubkey),
-    fromHex(params.flowNodePubkey),
-    fromHex(params.centralPubkey),
+    pubkeyToBytes(params.consumeNodePubkey),
+    pubkeyToBytes(params.flowNodePubkey),
+    pubkeyToBytes(params.centralPubkey),
   );
 }
 
@@ -94,13 +109,13 @@ export function buildTransactionRecordFullPayload(params: {
     uuidToBytes(params.uuid),
     toBytesBigEndian(params.amount, 8),
     toBytesBigEndian(params.currencyType, 2),
-    fromHex(params.transactionDifficultyTarget.padStart(8, '0')),
+    nBitsToBytes(params.transactionDifficultyTarget),
     toBytesBigEndian(params.nonce, 4),
-    fromHex(params.consumeNodePubkey),
-    fromHex(params.flowNodePubkey),
-    fromHex(params.centralPubkey),
-    fromHex(params.consumeNodeSignature),
-    fromHex(params.flowNodeSignature),
+    pubkeyToBytes(params.consumeNodePubkey),
+    pubkeyToBytes(params.flowNodePubkey),
+    pubkeyToBytes(params.centralPubkey),
+    signatureToBytes(params.consumeNodeSignature),
+    signatureToBytes(params.flowNodeSignature),
     toBytesBigEndian(params.confirmTimestamp, 8),
   );
 }
