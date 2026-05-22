@@ -47,16 +47,30 @@
 - 通过 `npm install` 修复 Rollup optional dependency 缺失问题。
 - `package.json` 增加 `engines.node >=18` 和 `sideEffects: false`。
 
+### 阶段五：类型模型升级
+
+- API wire DTO 已拆分为 `*Raw` 类型，保留后端 JSON number 形态。
+- 业务 DTO 已提供 normalized 类型，`amount`、`confirmTimestamp`、`height`、区块时间戳和消费链金额/时间戳等 64 位字段转换为 `bigint`。
+- 新增 `normalizeApiResponse`、`normalizeApiResponseList` 以及各业务 DTO 的 normalize 函数。
+- normalize 会拒绝超过 `Number.MAX_SAFE_INTEGER` 的 number，避免静默转换已经丢精度的值。
+- README 已标注后端 JSON number 的安全整数风险，并说明 difficulty target 保持 hex string。
+
+### P2：高层入口和子路径导出
+
+- 新增 `NmsciSdk` 组合型服务入口，封装 flow-node、central-pubkey、transaction、block、consume-chain、returning-flow-rate 等分组 API。
+- 新增 `src/api/index.ts`、`src/messages/index.ts`、`src/protocol/index.ts`。
+- `package.json` 增加 `./api`、`./messages`、`./protocol` 子路径 exports。
+- `tsup` 调整为多入口构建，并将 `elliptic` 打包进 ESM/CJS 输出，修复 Node ESM 直接导入 CJS 依赖的运行时问题。
+
 ## 验证结果
 
 - `git diff --check`：通过。
 - `npm run typecheck`：通过。
-- `npm test`：通过，3 个测试文件、12 个测试用例。
+- `npm test`：通过，5 个测试文件、18 个测试用例。
 - `npm run build`：通过。
+- 子路径 ESM 导入验证：通过，`@nmsci/sdk`、`@nmsci/sdk/api`、`@nmsci/sdk/messages`、`@nmsci/sdk/protocol` 均可由 Node 直接导入。
 
 ## 待继续
 
-- 阶段五 normalized DTO/bigint 类型模型尚未实现。
-- 高层 `NmsciSdk` 组合型服务入口尚未实现。
-- 子路径 exports（例如 `./protocol`、`./messages`、`./api`）尚未实现。
 - Low-S 验签场景、PoW target 精确测试和真实签名验签测试还可继续补强。
+- 还可以继续补充 `noUnusedLocals`、`noUnusedParameters`、`exactOptionalPropertyTypes` 等更严格 TypeScript 选项。

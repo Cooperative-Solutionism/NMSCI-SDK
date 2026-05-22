@@ -1,5 +1,5 @@
 import { nBitsToBytes, toHex } from './encoding';
-import { doubleSha256, doubleSha256Hex } from './crypto';
+import { doubleSha256, doubleSha256Hex } from './hash';
 
 export function calculateTargetFromNBits(nBitsHex: string): string {
   const bytes = nBitsToBytes(nBitsHex);

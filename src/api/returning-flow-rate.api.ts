@@ -1,7 +1,7 @@
 import { ApiClient, ApiResponse } from './client';
-import type { ReturningFlowRateResponseDTO } from './types';
+import type { ReturningFlowRateResponseDTORaw } from './types';
 
-export type ReturningFlowRateResponse = ApiResponse<ReturningFlowRateResponseDTO>;
+export type ReturningFlowRateResponse = ApiResponse<ReturningFlowRateResponseDTORaw>;
 
 export async function getReturningFlowRateById(
   client: ApiClient,
@@ -12,13 +12,13 @@ export async function getReturningFlowRateById(
     endTime?: number;
     currencyType?: number;
   },
-): Promise<ApiResponse<ReturningFlowRateResponseDTO>> {
+): Promise<ApiResponse<ReturningFlowRateResponseDTORaw>> {
   const query: Record<string, string | number> = { targetId: params.targetId };
   if (params.sourceId) query['sourceId'] = params.sourceId;
   if (params.startTime !== undefined) query['startTime'] = params.startTime;
   if (params.endTime !== undefined) query['endTime'] = params.endTime;
   if (params.currencyType !== undefined) query['currencyType'] = params.currencyType;
-  return client.get<ReturningFlowRateResponseDTO>('/returning-flow-rate/by-id', query);
+  return client.get<ReturningFlowRateResponseDTORaw>('/returning-flow-rate/by-id', query);
 }
 
 export async function getReturningFlowRateByPubkey(
@@ -30,11 +30,11 @@ export async function getReturningFlowRateByPubkey(
     endTime?: number;
     currencyType?: number;
   },
-): Promise<ApiResponse<ReturningFlowRateResponseDTO>> {
+): Promise<ApiResponse<ReturningFlowRateResponseDTORaw>> {
   const query: Record<string, string | number> = { target: params.target };
   if (params.source) query['source'] = params.source;
   if (params.startTime !== undefined) query['startTime'] = params.startTime;
   if (params.endTime !== undefined) query['endTime'] = params.endTime;
   if (params.currencyType !== undefined) query['currencyType'] = params.currencyType;
-  return client.get<ReturningFlowRateResponseDTO>('/returning-flow-rate/by-pubkey', query);
+  return client.get<ReturningFlowRateResponseDTORaw>('/returning-flow-rate/by-pubkey', query);
 }

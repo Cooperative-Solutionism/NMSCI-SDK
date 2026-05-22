@@ -1,7 +1,7 @@
 import { ApiClient, ApiResponse } from './client';
-import type { CentralPubkeyLockedMsg } from './types';
+import type { CentralPubkeyLockedMsgRaw } from './types';
 
-export type CentralPubkeyLockedMsgResponse = ApiResponse<CentralPubkeyLockedMsg>;
+export type CentralPubkeyLockedMsgResponse = ApiResponse<CentralPubkeyLockedMsgRaw>;
 
 export async function sendCentralPubkeyLockedMsg(
   client: ApiClient,
@@ -13,13 +13,13 @@ export async function sendCentralPubkeyLockedMsg(
 export async function getCentralPubkeyLockedMsgById(
   client: ApiClient,
   id: string,
-): Promise<ApiResponse<CentralPubkeyLockedMsg>> {
-  return client.get<CentralPubkeyLockedMsg>(`/central-pubkey-locked-msg/id/${encodeURIComponent(id)}`);
+): Promise<ApiResponse<CentralPubkeyLockedMsgRaw>> {
+  return client.get<CentralPubkeyLockedMsgRaw>(`/central-pubkey-locked-msg/id/${encodeURIComponent(id)}`);
 }
 
 export async function getCentralPubkeyLockedMsgByCentralPubkey(
   client: ApiClient,
   centralPubkey: string,
-): Promise<ApiResponse<CentralPubkeyLockedMsg>> {
-  return client.get<CentralPubkeyLockedMsg>(`/central-pubkey-locked-msg/central-pubkey/${encodeURIComponent(centralPubkey)}`);
+): Promise<ApiResponse<CentralPubkeyLockedMsgRaw>> {
+  return client.get<CentralPubkeyLockedMsgRaw>(`/central-pubkey-locked-msg/central-pubkey/${encodeURIComponent(centralPubkey)}`);
 }

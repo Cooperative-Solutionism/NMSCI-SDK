@@ -1,5 +1,6 @@
 import { ec as EC } from 'elliptic';
 import { toHex, fromHex, pubkeyToBytes, signatureToBytes } from './encoding';
+import { doubleSha256, doubleSha256Hex } from './hash';
 
 const ec = new EC('secp256k1');
 const CURVE_ORDER = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
@@ -52,15 +53,7 @@ export function validatePrivateKey(privateKeyHex: string): boolean {
   }
 }
 
-export async function doubleSha256(data: Uint8Array): Promise<Uint8Array> {
-  const firstHash = await crypto.subtle.digest('SHA-256', data as BufferSource);
-  const secondHash = await crypto.subtle.digest('SHA-256', firstHash);
-  return new Uint8Array(secondHash);
-}
-
-export async function doubleSha256Hex(data: Uint8Array): Promise<string> {
-  return toHex(await doubleSha256(data));
-}
+export { doubleSha256, doubleSha256Hex };
 
 export async function signData(data: Uint8Array, privateKeyHex: string): Promise<Uint8Array> {
   const cleanHex = privateKeyHex.replace(/^0x/, '');

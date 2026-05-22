@@ -5,6 +5,7 @@ export * from './core/crypto';
 
 export * from './protocol/spec';
 export * from './protocol/verify';
+export * from './sdk';
 
 export * from './messages/types';
 export * from './messages/flow-node-register';
@@ -17,18 +18,31 @@ export * from './messages/transaction-mount';
 export { ApiClient, ApiClientError } from './api/client';
 export type { ApiResponse, FetchLike, QueryParams, SdkConfig } from './api/client';
 export type {
+  FlowNodeRegisterMsgRaw,
   FlowNodeRegisterMsg,
+  CentralPubkeyEmpowerMsgRaw,
   CentralPubkeyEmpowerMsg,
+  CentralPubkeyLockedMsgRaw,
   CentralPubkeyLockedMsg,
+  FlowNodeLockedMsgRaw,
   FlowNodeLockedMsg,
+  TransactionRecordMsgRaw,
   TransactionRecordMsg,
+  TransactionMountMsgRaw,
   TransactionMountMsg,
+  BlockInfoRaw,
   BlockInfo,
+  ConsumeChainRaw,
   ConsumeChain,
+  ConsumeChainEdgeRaw,
   ConsumeChainEdge,
+  ConsumeChainResponseDTORaw,
   ConsumeChainResponseDTO,
+  ReturningFlowRateResponseDTORaw,
   ReturningFlowRateResponseDTO,
 } from './api/types';
+
+export * from './api/normalize';
 
 export * from './api/flow-node-register.api';
 export * from './api/central-pubkey-empower.api';

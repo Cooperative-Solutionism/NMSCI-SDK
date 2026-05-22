@@ -1,5 +1,5 @@
-import { doubleSha256Hex } from '../core/crypto';
 import { bytesToUint16, fromHex } from '../core/encoding';
+import { doubleSha256Hex } from '../core/hash';
 import { MSG_SPECS } from './spec';
 
 const SPECS_BY_TYPE = Object.values(MSG_SPECS);
