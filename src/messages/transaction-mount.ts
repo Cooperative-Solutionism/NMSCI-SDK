@@ -1,8 +1,9 @@
 import { MsgType } from './types';
 import type { Pubkey, Signature, UUID } from '../core/types';
-import { concat, fromHex, uuidToBytes, toBytesBigEndian, toHex } from '../core/encoding';
+import { concat, nBitsToBytes, pubkeyToBytes, signatureToBytes, uuidToBytes, toBytesBigEndian, toHex } from '../core/encoding';
 import { signData } from '../core/crypto';
 import { calculateTargetFromNBits, mineNonce } from '../core/pow';
+import { MSG_SPECS } from '../protocol/spec';
 
 /** 341-byte Transaction Mount message (协议定义为341字节) */
 export interface TransactionMountMessage {
@@ -21,24 +22,39 @@ export interface TransactionMountMessage {
 }
 
 export function serializeTransactionMount(msg: TransactionMountMessage): Uint8Array {
-  const consumeSig = msg.consumeNodeSignature ? fromHex(msg.consumeNodeSignature) : new Uint8Array(64);
-  const flowSig = msg.flowNodeSignature ? fromHex(msg.flowNodeSignature) : new Uint8Array(64);
+  const consumeSig = msg.consumeNodeSignature ? signatureToBytes(msg.consumeNodeSignature) : new Uint8Array(64);
+  const flowSig = msg.flowNodeSignature ? signatureToBytes(msg.flowNodeSignature) : new Uint8Array(64);
   const timestamp = msg.confirmTimestamp != null ? toBytesBigEndian(msg.confirmTimestamp, 8) : new Uint8Array(8);
-  const centralSig = msg.centralSignature ? fromHex(msg.centralSignature) : new Uint8Array(64);
+  const centralSig = msg.centralSignature ? signatureToBytes(msg.centralSignature) : new Uint8Array(64);
 
   return concat(
     toBytesBigEndian(MsgType.TRANSACTION_MOUNT, 2),
     uuidToBytes(msg.uuid),
     uuidToBytes(msg.mountedTransactionRecordId),
-    fromHex(msg.transactionDifficultyTarget.padStart(8, '0')),
+    nBitsToBytes(msg.transactionDifficultyTarget),
     toBytesBigEndian(msg.nonce, 4),
-    fromHex(msg.consumeNodePubkey),
-    fromHex(msg.flowNodePubkey),
-    fromHex(msg.centralPubkey),
+    pubkeyToBytes(msg.consumeNodePubkey),
+    pubkeyToBytes(msg.flowNodePubkey),
+    pubkeyToBytes(msg.centralPubkey),
     consumeSig,
     flowSig,
     timestamp,
     centralSig,
+  );
+}
+
+export const serializeTransactionMountFullMessage = serializeTransactionMount;
+
+export function serializeTransactionMountSubmitPayload(
+  msg: TransactionMountMessage & {
+    consumeNodeSignature: Signature;
+    flowNodeSignature: Signature;
+  },
+): Uint8Array {
+  return concat(
+    buildTransactionMountPayload(msg),
+    signatureToBytes(msg.consumeNodeSignature),
+    signatureToBytes(msg.flowNodeSignature),
   );
 }
 
@@ -60,13 +76,15 @@ export function buildTransactionMountPayload(params: {
     toBytesBigEndian(MsgType.TRANSACTION_MOUNT, 2),
     uuidToBytes(params.uuid),
     uuidToBytes(params.mountedTransactionRecordId),
-    fromHex(params.transactionDifficultyTarget.padStart(8, '0')),
+    nBitsToBytes(params.transactionDifficultyTarget),
     toBytesBigEndian(params.nonce, 4),
-    fromHex(params.consumeNodePubkey),
-    fromHex(params.flowNodePubkey),
-    fromHex(params.centralPubkey),
+    pubkeyToBytes(params.consumeNodePubkey),
+    pubkeyToBytes(params.flowNodePubkey),
+    pubkeyToBytes(params.centralPubkey),
   );
 }
+
+export const buildTransactionMountPreSignPayload = buildTransactionMountPayload;
 
 /**
  * Build the 277-byte payload for central signature (前8项 + consumeSig + flowSig + timestamp).
@@ -88,13 +106,13 @@ export function buildTransactionMountFullPayload(params: {
     toBytesBigEndian(MsgType.TRANSACTION_MOUNT, 2),
     uuidToBytes(params.uuid),
     uuidToBytes(params.mountedTransactionRecordId),
-    fromHex(params.transactionDifficultyTarget.padStart(8, '0')),
+    nBitsToBytes(params.transactionDifficultyTarget),
     toBytesBigEndian(params.nonce, 4),
-    fromHex(params.consumeNodePubkey),
-    fromHex(params.flowNodePubkey),
-    fromHex(params.centralPubkey),
-    fromHex(params.consumeNodeSignature),
-    fromHex(params.flowNodeSignature),
+    pubkeyToBytes(params.consumeNodePubkey),
+    pubkeyToBytes(params.flowNodePubkey),
+    pubkeyToBytes(params.centralPubkey),
+    signatureToBytes(params.consumeNodeSignature),
+    signatureToBytes(params.flowNodeSignature),
     toBytesBigEndian(params.confirmTimestamp, 8),
   );
 }
@@ -117,7 +135,9 @@ export async function signTransactionMountPayload(
   payload: Uint8Array,
   privateKeyHex: string,
 ): Promise<Signature> {
-  if (payload.length !== 141) throw new Error(`Mount payload must be 141 bytes, got ${payload.length}`);
+  if (payload.length !== MSG_SPECS.TRANSACTION_MOUNT.preSignLength) {
+    throw new Error(`Mount payload must be ${MSG_SPECS.TRANSACTION_MOUNT.preSignLength} bytes, got ${payload.length}`);
+  }
   const sig = await signData(payload, privateKeyHex);
   return toHex(sig) as Signature;
 }

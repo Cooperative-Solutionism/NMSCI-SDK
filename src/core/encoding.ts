@@ -4,14 +4,20 @@
  */
 
 export function toBytesBigEndian(value: number | bigint, byteLength: number): Uint8Array {
+  const bigintValue = BigInt(value);
+  const max = (1n << BigInt(byteLength * 8)) - 1n;
+  if (bigintValue < 0n || bigintValue > max) {
+    throw new Error(`Unsigned ${byteLength}-byte integer out of range: ${value.toString()}`);
+  }
+
   const buffer = new ArrayBuffer(byteLength);
   const view = new DataView(buffer);
   if (byteLength === 2) {
-    view.setUint16(0, Number(value), false);
+    view.setUint16(0, Number(bigintValue), false);
   } else if (byteLength === 4) {
-    view.setUint32(0, Number(value), false);
+    view.setUint32(0, Number(bigintValue), false);
   } else if (byteLength === 8) {
-    view.setBigUint64(0, BigInt(value), false);
+    view.setBigUint64(0, bigintValue, false);
   } else {
     throw new Error(`Unsupported byte length: ${byteLength}`);
   }
@@ -23,7 +29,7 @@ export function uuidToBytes(uuid: string): Uint8Array {
   if (clean.length !== 32) {
     throw new Error(`Invalid UUID: expected 32 hex chars, got ${clean.length}`);
   }
-  return fromHex(clean);
+  return fromHex(clean, 16);
 }
 
 export function bytesToUuid(bytes: Uint8Array): string {
@@ -39,16 +45,42 @@ export function toHex(bytes: Uint8Array): string {
     .join('');
 }
 
-export function fromHex(hex: string): Uint8Array {
+export function fromHex(hex: string, expectedBytes?: number): Uint8Array {
   const clean = hex.replace(/^0x/, '');
   if (clean.length % 2 !== 0) {
     throw new Error(`Invalid hex string: odd length (${clean.length})`);
+  }
+  if (!/^[0-9a-fA-F]*$/.test(clean)) {
+    throw new Error('Invalid hex string: contains non-hex characters');
+  }
+  if (expectedBytes != null && clean.length !== expectedBytes * 2) {
+    throw new Error(`Invalid hex length: expected ${expectedBytes} bytes, got ${clean.length / 2}`);
   }
   const bytes = new Uint8Array(clean.length / 2);
   for (let i = 0; i < clean.length; i += 2) {
     bytes[i / 2] = parseInt(clean.substring(i, i + 2), 16);
   }
   return bytes;
+}
+
+export function pubkeyToBytes(pubkey: string): Uint8Array {
+  const clean = pubkey.replace(/^0x/, '');
+  if (clean.length !== 66) {
+    throw new Error(`Compressed public key must be 33 bytes, got ${clean.length / 2}`);
+  }
+  const prefix = clean.slice(0, 2).toLowerCase();
+  if (prefix !== '02' && prefix !== '03') {
+    throw new Error('Compressed public key must start with 02 or 03');
+  }
+  return fromHex(clean, 33);
+}
+
+export function signatureToBytes(signature: string): Uint8Array {
+  return fromHex(signature, 64);
+}
+
+export function nBitsToBytes(nBits: string): Uint8Array {
+  return fromHex(nBits.replace(/^0x/, '').padStart(8, '0'), 4);
 }
 
 export function concat(...arrays: Uint8Array[]): Uint8Array {

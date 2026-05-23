@@ -1,22 +1,8 @@
-function fromHex(hex: string): Uint8Array {
-  const clean = hex.replace(/^0x/, '');
-  if (clean.length % 2 !== 0) {
-    throw new Error(`Invalid hex string: odd length (${clean.length})`);
-  }
-  const bytes = new Uint8Array(clean.length / 2);
-  for (let i = 0; i < clean.length; i += 2) {
-    bytes[i / 2] = parseInt(clean.substring(i, i + 2), 16);
-  }
-  return bytes;
-}
-
-function toHex(bytes: Uint8Array): string {
-  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-}
+import { nBitsToBytes, toHex } from './encoding';
+import { doubleSha256, doubleSha256Hex } from './hash';
 
 export function calculateTargetFromNBits(nBitsHex: string): string {
-  const clean = nBitsHex.replace(/^0x/, '').padStart(8, '0');
-  const bytes = fromHex(clean);
+  const bytes = nBitsToBytes(nBitsHex);
   const exponent = bytes[0];
   const mantissa = (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
 
@@ -52,17 +38,7 @@ export function compareHex(a: string, b: string): number {
   return 0;
 }
 
-export async function doubleSha256Hex(data: Uint8Array): Promise<string> {
-  const first = await crypto.subtle.digest('SHA-256', data as BufferSource);
-  const second = await crypto.subtle.digest('SHA-256', first);
-  return toHex(new Uint8Array(second));
-}
-
-export async function doubleSha256(data: Uint8Array): Promise<Uint8Array> {
-  const first = await crypto.subtle.digest('SHA-256', data as BufferSource);
-  const second = await crypto.subtle.digest('SHA-256', first);
-  return new Uint8Array(second);
-}
+export { doubleSha256, doubleSha256Hex };
 
 export async function mineNonce(
   noncePrefix: Uint8Array,

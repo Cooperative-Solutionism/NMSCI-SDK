@@ -1,6 +1,8 @@
 import { MsgType } from './types';
 import type { Pubkey, Signature, UUID } from '../core/types';
-import { concat, fromHex, uuidToBytes, toBytesBigEndian } from '../core/encoding';
+import { concat, signatureToBytes, uuidToBytes, toBytesBigEndian, pubkeyToBytes, toHex } from '../core/encoding';
+import { signData } from '../core/crypto';
+import { MSG_SPECS } from '../protocol/spec';
 
 /** 220-byte Flow Node Locked message (协议定义为220字节) */
 export interface FlowNodeLockedMessage {
@@ -17,20 +19,31 @@ export interface FlowNodeLockedMessage {
  * Build the 220-byte serialized form.
  */
 export function serializeFlowNodeLocked(msg: FlowNodeLockedMessage): Uint8Array {
-  const flowSig = msg.flowNodeSignature ? fromHex(msg.flowNodeSignature) : new Uint8Array(64);
+  const flowSig = msg.flowNodeSignature ? signatureToBytes(msg.flowNodeSignature) : new Uint8Array(64);
   const timestamp = msg.confirmTimestamp != null
     ? toBytesBigEndian(msg.confirmTimestamp, 8)
     : new Uint8Array(8);
-  const centralSig = msg.centralSignature ? fromHex(msg.centralSignature) : new Uint8Array(64);
+  const centralSig = msg.centralSignature ? signatureToBytes(msg.centralSignature) : new Uint8Array(64);
 
   return concat(
     toBytesBigEndian(MsgType.FLOW_NODE_FREEZE, 2), // 2 bytes
     uuidToBytes(msg.uuid),                          // 16 bytes
-    fromHex(msg.flowNodePubkey),                    // 33 bytes
-    fromHex(msg.centralPubkey),                     // 33 bytes
+    pubkeyToBytes(msg.flowNodePubkey),              // 33 bytes
+    pubkeyToBytes(msg.centralPubkey),               // 33 bytes
     flowSig,                                         // 64 bytes
     timestamp,                                       // 8 bytes
     centralSig,                                      // 64 bytes
+  );
+}
+
+export const serializeFlowNodeLockedFullMessage = serializeFlowNodeLocked;
+
+export function serializeFlowNodeLockedSubmitPayload(
+  msg: FlowNodeLockedMessage & { flowNodeSignature: Signature },
+): Uint8Array {
+  return concat(
+    buildFlowNodeLockedPayload(msg),
+    signatureToBytes(msg.flowNodeSignature),
   );
 }
 
@@ -46,9 +59,21 @@ export function buildFlowNodeLockedPayload(params: {
   return concat(
     toBytesBigEndian(MsgType.FLOW_NODE_FREEZE, 2),
     uuidToBytes(params.uuid),
-    fromHex(params.flowNodePubkey),
-    fromHex(params.centralPubkey),
+    pubkeyToBytes(params.flowNodePubkey),
+    pubkeyToBytes(params.centralPubkey),
   );
+}
+
+export const buildFlowNodeLockedPreSignPayload = buildFlowNodeLockedPayload;
+
+export async function signFlowNodeLockedPayload(
+  payload: Uint8Array,
+  privateKeyHex: string,
+): Promise<Signature> {
+  if (payload.length !== MSG_SPECS.FLOW_NODE_FREEZE.preSignLength) {
+    throw new Error(`Flow node locked payload must be ${MSG_SPECS.FLOW_NODE_FREEZE.preSignLength} bytes, got ${payload.length}`);
+  }
+  return toHex(await signData(payload, privateKeyHex)) as Signature;
 }
 
 /**
@@ -65,9 +90,9 @@ export function buildFlowNodeLockedFullPayload(params: {
   return concat(
     toBytesBigEndian(MsgType.FLOW_NODE_FREEZE, 2),
     uuidToBytes(params.uuid),
-    fromHex(params.flowNodePubkey),
-    fromHex(params.centralPubkey),
-    fromHex(params.flowNodeSignature),
+    pubkeyToBytes(params.flowNodePubkey),
+    pubkeyToBytes(params.centralPubkey),
+    signatureToBytes(params.flowNodeSignature),
     toBytesBigEndian(params.confirmTimestamp, 8),
   );
 }

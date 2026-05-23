@@ -34,7 +34,7 @@ yarn add @nmsci/sdk
 pnpm add @nmsci/sdk
 ```
 
-> **前置要求**：Node.js >= 16（需要 `crypto.subtle` API），或任何现代浏览器环境。
+> **前置要求**：Node.js >= 18（需要 `crypto.subtle` API），或任何现代浏览器环境。
 
 ---
 
@@ -50,7 +50,7 @@ const { data: block } = await client.get('/block-chain/last');
 console.log('Latest block height:', block.height);
 
 // 发送原始字节数据
-const res = await client.post('/flow-node-register-msg/send', byteArray);
+const res = await client.postBinary('/flow-node-register-msg/send', bytes);
 ```
 
 ---
@@ -75,14 +75,16 @@ const res = await client.post('/flow-node-register-msg/send', byteArray);
 
 ### 消息类型
 
-| 值 | 名称 | 字节数 |
-|----|------|--------|
-| 0 | 流转节点注册信息 | 123 |
-| 1 | 中心公钥公证信息 | 148 |
-| 2 | 中心公钥冻结信息 | 115 |
-| 3 | 流转节点冻结信息 | 148 |
-| 4 | 交易记录信息 | 263 |
-| 5 | 交易挂载信息 | 269 |
+| 值 | 名称 | 协议完整字节数 | 客户端提交字节数 |
+|----|------|---:|---:|
+| 0 | 流转节点注册信息 | 123 | 123 |
+| 1 | 中心公钥公证信息 | 220 | 148 |
+| 2 | 中心公钥冻结信息 | 187 | 115 |
+| 3 | 流转节点冻结信息 | 220 | 148 |
+| 4 | 交易记录信息 | 335 | 263 |
+| 5 | 交易挂载信息 | 341 | 269 |
+
+协议完整消息包含 `confirmTimestamp` 和 `centralSignature`，用于后端存储、区块固定、`rawBytes` 和 `txid`。客户端 POST `/send` 时发送的是提交载荷，后端会补齐中心时间戳和中心签名；因此交易记录的完整消息是 335 字节，但发送给当前后端的是 263 字节。
 
 ### 货币类型
 
@@ -102,7 +104,7 @@ import { ApiClient, type SdkConfig } from '@nmsci/sdk';
 
 const config: SdkConfig = {
   baseUrl: 'http://localhost:8080', // 后端地址
-  authToken: 'Bearer xxx',          // 可选：JWT Token
+  authToken: 'xxx',                 // 可选：裸 JWT Token，SDK 自动添加 Bearer
   timeout: 15000,                   // 可选：请求超时（毫秒），默认 15000
 };
 
@@ -134,6 +136,47 @@ console.log(res.data);
 
 // POST 请求
 const res = await client.post<T>('/path', bodyData);
+```
+
+### Raw 与 Normalized DTO
+
+后端 JSON 中的 `amount`、`confirmTimestamp`、`height` 等 64 位整数以 `number` 返回，可能超过 `Number.MAX_SAFE_INTEGER`。SDK 的函数式 API 保持 wire JSON 形态并返回 `*Raw` 类型；如需 bigint，可显式调用 normalize 函数：
+
+```typescript
+import {
+  getTransactionRecordMsgById,
+  normalizeApiResponse,
+  normalizeTransactionRecordMsg,
+} from '@nmsci/sdk';
+
+const raw = await getTransactionRecordMsgById(client, id); // ApiResponse<TransactionRecordMsgRaw>
+const normalized = normalizeApiResponse(raw, normalizeTransactionRecordMsg); // ApiResponse<TransactionRecordMsg>
+
+// normalized.data.amount 与 normalized.data.confirmTimestamp 均为 bigint
+```
+
+如果原始 number 已超过安全整数范围，normalize 会抛错，避免把已经丢精度的值静默转换成 bigint。difficulty target 保持 hex string，与后端序列化保持一致。
+
+### 组合型 SDK
+
+除了函数式 API，也可以使用 `NmsciSdk` 组合入口，避免每次手动传入 `client`：
+
+```typescript
+import { NmsciSdk } from '@nmsci/sdk';
+
+const sdk = new NmsciSdk({ baseUrl: 'http://localhost:8080' });
+
+await sdk.flowNodeRegister.send(submitPayload);
+await sdk.transactionRecord.getByFlowNodePubkey(flowNodePubkey);
+await sdk.returningFlowRate.getByPubkey({ target: flowNodePubkey, currencyType: 1 });
+```
+
+也可以按子路径导入：
+
+```typescript
+import { ApiClient } from '@nmsci/sdk/api';
+import { serializeTransactionRecordSubmitPayload } from '@nmsci/sdk/messages';
+import { MSG_SPECS } from '@nmsci/sdk/protocol';
 ```
 
 ---
@@ -230,7 +273,7 @@ compareHex('0000ffff...', '00010000...'); // -1
 
 ## 消息序列化
 
-每个消息类型都有对应的序列化函数，用于将结构化数据转换为 123~269 字节的 `Uint8Array`，再提交给后端 API。
+每个消息类型都有两类序列化函数：`serializeXxxSubmitPayload` 生成客户端 POST `/send` 使用的提交载荷，`serializeXxxFullMessage` 生成包含中心确认字段的协议完整消息。旧的 `serializeXxx` 仍保留为完整消息兼容别名。
 
 > **关键**：所有签名均基于特定的**预签名载荷**（不含签名字段的字节序列）计算，具体字段分布见各消息说明。
 
@@ -271,8 +314,7 @@ msg.flowNodeSignature = toHex(sig) as Signature;
 const bytes = serializeFlowNodeRegister(msg);
 
 // 5. 提交（ArrayBuffer → number[]）
-const byteArray = Array.from(bytes);
-const res = await client.post('/flow-node-register-msg/send', byteArray);
+const res = await client.postBinary('/flow-node-register-msg/send', bytes);
 ```
 
 **字段布局（123 字节）：**
@@ -286,10 +328,10 @@ const res = await client.post('/flow-node-register-msg/send', byteArray);
 | flowNodePubkey | 33 | 流转节点压缩公钥 |
 | flowNodeSignature | 64 | 流转节点对前5项数据的签名 |
 
-### 中心公钥授权（消息类型 1，148 字节）
+### 中心公钥授权（消息类型 1，完整 220 字节，提交 148 字节）
 
 ```typescript
-import { MsgType, buildCentralPubkeyEmpowerPayload, buildCentralPubkeyEmpowerFullPayload, serializeCentralPubkeyEmpower, signData } from '@nmsci/sdk';
+import { MsgType, buildCentralPubkeyEmpowerPayload, buildCentralPubkeyEmpowerFullPayload, serializeCentralPubkeyEmpowerSubmitPayload, serializeCentralPubkeyEmpowerFullMessage, signData } from '@nmsci/sdk';
 import { fromHex, toHex } from '@nmsci/sdk';
 
 const msg = {
@@ -310,7 +352,7 @@ const prePayload = buildCentralPubkeyEmpowerPayload({
 });
 msg.flowNodeSignature = toHex(await signData(prePayload, flowNodePrivateKey)) as Signature;
 
-// 第二步：中心节点签名（签 fullPayload = 148字节）
+// 后端会生成 confirmTimestamp 和 centralSignature；离线完整消息校验时中心签名对象为 156 字节
 const fullPayload = buildCentralPubkeyEmpowerFullPayload({
   uuid: msg.uuid,
   flowNodePubkey: msg.flowNodePubkey,
@@ -320,14 +362,14 @@ const fullPayload = buildCentralPubkeyEmpowerFullPayload({
 });
 msg.centralSignature = toHex(await signData(fullPayload, centralPrivateKey)) as Signature;
 
-const byteArray = Array.from(serializeCentralPubkeyEmpower(msg));
-await client.post('/central-pubkey-empower-msg/send', byteArray);
+await client.postBinary('/central-pubkey-empower-msg/send', serializeCentralPubkeyEmpowerSubmitPayload(msg));
+const fullBytes = serializeCentralPubkeyEmpowerFullMessage(msg); // 220 字节，用于校验后端 rawBytes
 ```
 
-### 中心公钥冻结（消息类型 2，115 字节）
+### 中心公钥冻结（消息类型 2，完整 187 字节，提交 115 字节）
 
 ```typescript
-import { MsgType, buildCentralPubkeyLockedPayload, buildCentralPubkeyLockedFullPayload, serializeCentralPubkeyLocked, signData } from '@nmsci/sdk';
+import { MsgType, buildCentralPubkeyLockedPayload, buildCentralPubkeyLockedFullPayload, serializeCentralPubkeyLockedSubmitPayload, serializeCentralPubkeyLockedFullMessage, signData } from '@nmsci/sdk';
 
 const msg = {
   msgType: MsgType.CENTRAL_KEY_FREEZE,
@@ -345,7 +387,7 @@ const prePayload = buildCentralPubkeyLockedPayload({
 });
 msg.centralSignaturePre = toHex(await signData(prePayload, centralPrivateKey)) as Signature;
 
-// 完整签名（115字节）
+// 离线完整消息校验时中心签名对象为 123 字节
 const fullPayload = buildCentralPubkeyLockedFullPayload({
   uuid: msg.uuid,
   centralPubkey: msg.centralPubkey,
@@ -354,16 +396,17 @@ const fullPayload = buildCentralPubkeyLockedFullPayload({
 });
 msg.centralSignature = toHex(await signData(fullPayload, centralPrivateKey)) as Signature;
 
-await client.post('/central-pubkey-locked-msg/send', Array.from(serializeCentralPubkeyLocked(msg)));
+await client.postBinary('/central-pubkey-locked-msg/send', serializeCentralPubkeyLockedSubmitPayload(msg));
+const fullBytes = serializeCentralPubkeyLockedFullMessage(msg); // 187 字节，用于校验后端 rawBytes
 // 注意：此接口成功时无响应体（void）
 ```
 
-### 流转节点冻结（消息类型 3，148 字节）
+### 流转节点冻结（消息类型 3，完整 220 字节，提交 148 字节）
 
 与中心公钥授权流程类似，需要流转节点和中心节点双重签名。
 
 ```typescript
-import { MsgType, buildFlowNodeLockedPayload, buildFlowNodeLockedFullPayload, serializeFlowNodeLocked, signData } from '@nmsci/sdk';
+import { MsgType, buildFlowNodeLockedPayload, buildFlowNodeLockedFullPayload, serializeFlowNodeLockedSubmitPayload, serializeFlowNodeLockedFullMessage, signData } from '@nmsci/sdk';
 
 const msg = {
   msgType: MsgType.FLOW_NODE_FREEZE,
@@ -383,7 +426,7 @@ const prePayload = buildFlowNodeLockedPayload({
 });
 msg.flowNodeSignature = toHex(await signData(prePayload, flowNodePrivateKey)) as Signature;
 
-// 中心节点签名（148字节）
+// 离线完整消息校验时中心签名对象为 156 字节
 const fullPayload = buildFlowNodeLockedFullPayload({
   ...msg,
   flowNodeSignature: msg.flowNodeSignature,
@@ -391,10 +434,11 @@ const fullPayload = buildFlowNodeLockedFullPayload({
 });
 msg.centralSignature = toHex(await signData(fullPayload, centralPrivateKey)) as Signature;
 
-await client.post('/flow-node-locked-msg/send', Array.from(serializeFlowNodeLocked(msg)));
+await client.postBinary('/flow-node-locked-msg/send', serializeFlowNodeLockedSubmitPayload(msg));
+const fullBytes = serializeFlowNodeLockedFullMessage(msg); // 220 字节，用于校验后端 rawBytes
 ```
 
-### 交易记录（消息类型 4，263 字节）
+### 交易记录（消息类型 4，完整 335 字节，提交 263 字节）
 
 需要 PoW + 消费节点签名 + 流转节点签名 + 中心节点签名。
 
@@ -402,7 +446,7 @@ await client.post('/flow-node-locked-msg/send', Array.from(serializeFlowNodeLock
 import {
   MsgType, CurrencyType,
   buildTransactionRecordPayload, buildTransactionRecordFullPayload,
-  serializeTransactionRecord,
+  serializeTransactionRecordSubmitPayload, serializeTransactionRecordFullMessage,
   signTransactionRecordPayload, mineTransactionRecordNonce,
 } from '@nmsci/sdk';
 import { fromHex, toHex, toBytesBigEndian, concat } from '@nmsci/sdk';
@@ -455,7 +499,7 @@ const consumeSig = await signTransactionRecordPayload(payload, consumeNodePrivat
 // 流转节点签名
 const flowSig = await signTransactionRecordPayload(payload, flowNodePrivateKey);
 
-// 中心节点签名（基于完整 263 字节载荷）
+// 离线完整消息校验时中心签名对象为 271 字节
 const fullPayload = buildTransactionRecordFullPayload({
   uuid, amount: 10000n, currencyType: CurrencyType.RMB_CENT,
   transactionDifficultyTarget: '0x1effffff', nonce,
@@ -478,10 +522,11 @@ const msg = {
   centralSignature: toHex(centralSig) as Signature,
 };
 
-await client.post('/transaction-record-msg/send', Array.from(serializeTransactionRecord(msg)));
+await client.postBinary('/transaction-record-msg/send', serializeTransactionRecordSubmitPayload(msg));
+const fullBytes = serializeTransactionRecordFullMessage(msg); // 335 字节，用于校验后端 rawBytes
 ```
 
-### 交易挂载（消息类型 5，269 字节）
+### 交易挂载（消息类型 5，完整 341 字节，提交 269 字节）
 
 与交易记录类似，但引用一笔已存在的交易记录 ID 作为起点。
 
@@ -489,7 +534,7 @@ await client.post('/transaction-record-msg/send', Array.from(serializeTransactio
 import {
   MsgType,
   buildTransactionMountPayload, buildTransactionMountFullPayload,
-  serializeTransactionMount,
+  serializeTransactionMountSubmitPayload, serializeTransactionMountFullMessage,
   signTransactionMountPayload, mineTransactionMountNonce,
 } from '@nmsci/sdk';
 import { toBytesBigEndian, concat, fromHex, toHex } from '@nmsci/sdk';
@@ -528,7 +573,7 @@ const payload = buildTransactionMountPayload({
 const consumeSig = await signTransactionMountPayload(payload, consumeNodePrivateKey);
 const flowSig    = await signTransactionMountPayload(payload, flowNodePrivateKey);
 
-// 中心节点签名（269 字节完整载荷）
+// 离线完整消息校验时中心签名对象为 277 字节
 const fullPayload = buildTransactionMountFullPayload({
   uuid, mountedTransactionRecordId: mountedRecordId,
   transactionDifficultyTarget: '0x1effffff', nonce,
@@ -549,7 +594,8 @@ const msg = {
   centralSignature: toHex(centralSig) as Signature,
 };
 
-await client.post('/transaction-mount-msg/send', Array.from(serializeTransactionMount(msg)));
+await client.postBinary('/transaction-mount-msg/send', serializeTransactionMountSubmitPayload(msg));
+const fullBytes = serializeTransactionMountFullMessage(msg); // 341 字节，用于校验后端 rawBytes
 ```
 
 ---
@@ -566,13 +612,13 @@ await client.post('/transaction-mount-msg/send', Array.from(serializeTransaction
 
 ```typescript
 // 发送注册信息
-sendFlowNodeRegisterMsg(client, byteArray: number[]): Promise<ApiResponse<FlowNodeRegisterMsg>>
+sendFlowNodeRegisterMsg(client, byteArray: number[]): Promise<ApiResponse<FlowNodeRegisterMsgRaw>>
 
 // 按 UUID 查询
-getFlowNodeRegisterMsgById(client, id: string): Promise<ApiResponse<FlowNodeRegisterMsg>>
+getFlowNodeRegisterMsgById(client, id: string): Promise<ApiResponse<FlowNodeRegisterMsgRaw>>
 
 // 按流转节点公钥查询
-getFlowNodeRegisterMsgByFlowNodePubkey(client, flowNodePubkey: string): Promise<ApiResponse<FlowNodeRegisterMsg>>
+getFlowNodeRegisterMsgByFlowNodePubkey(client, flowNodePubkey: string): Promise<ApiResponse<FlowNodeRegisterMsgRaw>>
 // flowNodePubkey: 66字符十六进制字符串
 ```
 
@@ -580,13 +626,13 @@ getFlowNodeRegisterMsgByFlowNodePubkey(client, flowNodePubkey: string): Promise<
 
 ```typescript
 // 发送授权信息
-sendCentralPubkeyEmpowerMsg(client, byteArray: number[]): Promise<ApiResponse<CentralPubkeyEmpowerMsg>>
+sendCentralPubkeyEmpowerMsg(client, byteArray: number[]): Promise<ApiResponse<CentralPubkeyEmpowerMsgRaw>>
 
 // 按 UUID 查询
-getCentralPubkeyEmpowerMsgById(client, id: string): Promise<ApiResponse<CentralPubkeyEmpowerMsg>>
+getCentralPubkeyEmpowerMsgById(client, id: string): Promise<ApiResponse<CentralPubkeyEmpowerMsgRaw>>
 
 // 按流转节点公钥查询
-getCentralPubkeyEmpowerMsgByFlowNodePubkey(client, flowNodePubkey: string): Promise<ApiResponse<CentralPubkeyEmpowerMsg>>
+getCentralPubkeyEmpowerMsgByFlowNodePubkey(client, flowNodePubkey: string): Promise<ApiResponse<CentralPubkeyEmpowerMsgRaw>>
 ```
 
 ### 中心公钥冻结
@@ -596,95 +642,95 @@ getCentralPubkeyEmpowerMsgByFlowNodePubkey(client, flowNodePubkey: string): Prom
 sendCentralPubkeyLockedMsg(client, byteArray: number[]): Promise<ApiResponse<void>>
 
 // 按 UUID 查询
-getCentralPubkeyLockedMsgById(client, id: string): Promise<ApiResponse<CentralPubkeyLockedMsg>>
+getCentralPubkeyLockedMsgById(client, id: string): Promise<ApiResponse<CentralPubkeyLockedMsgRaw>>
 
 // 按中心公钥查询
-getCentralPubkeyLockedMsgByCentralPubkey(client, centralPubkey: string): Promise<ApiResponse<CentralPubkeyLockedMsg>>
+getCentralPubkeyLockedMsgByCentralPubkey(client, centralPubkey: string): Promise<ApiResponse<CentralPubkeyLockedMsgRaw>>
 ```
 
 ### 流转节点冻结
 
 ```typescript
 // 发送冻结信息
-sendFlowNodeLockedMsg(client, byteArray: number[]): Promise<ApiResponse<FlowNodeLockedMsg>>
+sendFlowNodeLockedMsg(client, byteArray: number[]): Promise<ApiResponse<FlowNodeLockedMsgRaw>>
 
 // 按 UUID 查询
-getFlowNodeLockedMsgById(client, id: string): Promise<ApiResponse<FlowNodeLockedMsg>>
+getFlowNodeLockedMsgById(client, id: string): Promise<ApiResponse<FlowNodeLockedMsgRaw>>
 
 // 按流转节点公钥查询
-getFlowNodeLockedMsgByFlowNodePubkey(client, flowNodePubkey: string): Promise<ApiResponse<FlowNodeLockedMsg>>
+getFlowNodeLockedMsgByFlowNodePubkey(client, flowNodePubkey: string): Promise<ApiResponse<FlowNodeLockedMsgRaw>>
 ```
 
 ### 交易记录
 
 ```typescript
 // 发送交易记录
-sendTransactionRecordMsg(client, byteArray: number[]): Promise<ApiResponse<TransactionRecordMsg>>
+sendTransactionRecordMsg(client, byteArray: number[]): Promise<ApiResponse<TransactionRecordMsgRaw>>
 
 // 按 UUID 查询
-getTransactionRecordMsgById(client, id: string): Promise<ApiResponse<TransactionRecordMsg>>
+getTransactionRecordMsgById(client, id: string): Promise<ApiResponse<TransactionRecordMsgRaw>>
 
 // 按消费节点公钥查询（返回列表）
-getTransactionRecordMsgByConsumeNodePubkey(client, consumeNodePubkey: string): Promise<ApiResponse<TransactionRecordMsg[]>>
+getTransactionRecordMsgByConsumeNodePubkey(client, consumeNodePubkey: string): Promise<ApiResponse<TransactionRecordMsgRaw[]>>
 
 // 按流转节点公钥查询（返回列表）
-getTransactionRecordMsgByFlowNodePubkey(client, flowNodePubkey: string): Promise<ApiResponse<TransactionRecordMsg[]>>
+getTransactionRecordMsgByFlowNodePubkey(client, flowNodePubkey: string): Promise<ApiResponse<TransactionRecordMsgRaw[]>>
 
 // 按双方公钥查询（返回列表）
-getTransactionRecordMsgByBothPubkeys(client, consumeNodePubkey: string, flowNodePubkey: string): Promise<ApiResponse<TransactionRecordMsg[]>>
+getTransactionRecordMsgByBothPubkeys(client, consumeNodePubkey: string, flowNodePubkey: string): Promise<ApiResponse<TransactionRecordMsgRaw[]>>
 ```
 
 ### 交易挂载
 
 ```typescript
 // 发送交易挂载
-sendTransactionMountMsg(client, byteArray: number[]): Promise<ApiResponse<TransactionMountMsg>>
+sendTransactionMountMsg(client, byteArray: number[]): Promise<ApiResponse<TransactionMountMsgRaw>>
 
 // 按 UUID 查询
-getTransactionMountMsgById(client, id: string): Promise<ApiResponse<TransactionMountMsg>>
+getTransactionMountMsgById(client, id: string): Promise<ApiResponse<TransactionMountMsgRaw>>
 
 // 按被挂载的交易记录 ID 查询
-getTransactionMountMsgByMountedTransactionRecordId(client, id: string): Promise<ApiResponse<TransactionMountMsg>>
+getTransactionMountMsgByMountedTransactionRecordId(client, id: string): Promise<ApiResponse<TransactionMountMsgRaw>>
 
 // 按消费节点公钥查询（返回列表）
-getTransactionMountMsgByConsumeNodePubkey(client, consumeNodePubkey: string): Promise<ApiResponse<TransactionMountMsg[]>>
+getTransactionMountMsgByConsumeNodePubkey(client, consumeNodePubkey: string): Promise<ApiResponse<TransactionMountMsgRaw[]>>
 
 // 按流转节点公钥查询（返回列表）
-getTransactionMountMsgByFlowNodePubkey(client, flowNodePubkey: string): Promise<ApiResponse<TransactionMountMsg[]>>
+getTransactionMountMsgByFlowNodePubkey(client, flowNodePubkey: string): Promise<ApiResponse<TransactionMountMsgRaw[]>>
 
 // 按双方公钥查询（返回列表）
-getTransactionMountMsgByBothPubkeys(client, consumeNodePubkey: string, flowNodePubkey: string): Promise<ApiResponse<TransactionMountMsg[]>>
+getTransactionMountMsgByBothPubkeys(client, consumeNodePubkey: string, flowNodePubkey: string): Promise<ApiResponse<TransactionMountMsgRaw[]>>
 ```
 
 ### 区块链
 
 ```typescript
 // 查询最新区块
-getLastBlock(client): Promise<ApiResponse<BlockInfo>>
+getLastBlock(client): Promise<ApiResponse<BlockInfoRaw>>
 
 // 按区块高度查询
-getBlockByHeight(client, height: number): Promise<ApiResponse<BlockInfo>>
+getBlockByHeight(client, height: number): Promise<ApiResponse<BlockInfoRaw>>
 
 // 按区块头哈希查询
-getBlockByHash(client, hash: string): Promise<ApiResponse<BlockInfo>>  // hash: 64字符十六进制字符串
+getBlockByHash(client, hash: string): Promise<ApiResponse<BlockInfoRaw>>  // hash: 64字符十六进制字符串
 ```
 
 ### 消费链
 
 ```typescript
 // 按关联交易挂载记录查询
-getConsumeChainByMountedTransaction(client, relatedTransactionMount: string): Promise<ApiResponse<ConsumeChainResponseDTO[]>>
+getConsumeChainByMountedTransaction(client, relatedTransactionMount: string): Promise<ApiResponse<ConsumeChainResponseDTORaw[]>>
 
 // 按消费链 UUID 查询
-getConsumeChainById(client, id: string): Promise<ApiResponse<ConsumeChainResponseDTO>>
+getConsumeChainById(client, id: string): Promise<ApiResponse<ConsumeChainResponseDTORaw>>
 
 // 按起点查询
-getConsumeChainByStart(client, start: string, isLoop?: boolean): Promise<ApiResponse<ConsumeChainResponseDTO[]>>
+getConsumeChainByStart(client, start: string, isLoop?: boolean): Promise<ApiResponse<ConsumeChainResponseDTORaw[]>>
 // start: 起点流转节点 UUID
 // isLoop: 可选，true=仅返回已成环，false=仅返回未成环，不传=全部
 
 // 按终点查询
-getConsumeChainByEnd(client, end: string, isLoop?: boolean): Promise<ApiResponse<ConsumeChainResponseDTO[]>>
+getConsumeChainByEnd(client, end: string, isLoop?: boolean): Promise<ApiResponse<ConsumeChainResponseDTORaw[]>>
 // end: 终点流转节点 UUID
 ```
 
@@ -698,7 +744,7 @@ getReturningFlowRateById(client, {
   startTime?,     // 可选：开始时间（微秒），默认 0
   endTime?,       // 可选：结束时间（微秒），默认 Long.MAX_VALUE
   currencyType?,  // 可选：0=黄金，1=人民币，默认 1
-}): Promise<ApiResponse<ReturningFlowRateResponseDTO>>
+}): Promise<ApiResponse<ReturningFlowRateResponseDTORaw>>
 
 // 按公钥查询
 getReturningFlowRateByPubkey(client, {
@@ -707,7 +753,7 @@ getReturningFlowRateByPubkey(client, {
   startTime?,
   endTime?,
   currencyType?,
-}): Promise<ApiResponse<ReturningFlowRateResponseDTO>>
+}): Promise<ApiResponse<ReturningFlowRateResponseDTORaw>>
 
 // 返回字段说明
 // returningFlowRate        = 已成环金额 / 全部消费链金额
@@ -884,4 +930,4 @@ const block = await safeApiCall(() => client.get('/block-chain/last'));
 | `crypto.subtle` | Chrome 37, Firefox 34, Safari 11, Edge 12 |
 | `crypto.getRandomValues` | 所有现代浏览器 |
 
-如需在旧版浏览器中使用，可引入 `crypto` polyfill（如 `webcrypto-liner`）或使用 Node.js >= 19。
+如需在旧版浏览器中使用，可引入 `crypto` polyfill（如 `webcrypto-liner`）；Node.js 环境建议使用 >= 18。

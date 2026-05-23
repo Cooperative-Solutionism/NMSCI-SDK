@@ -1,6 +1,8 @@
 import { MsgType } from './types';
 import type { Pubkey, Signature, UUID } from '../core/types';
-import { concat, fromHex, toHex, uuidToBytes, toBytesBigEndian, bytesToUuid, bytesToUint16, bytesToBigInt64 } from '../core/encoding';
+import { concat, signatureToBytes, uuidToBytes, toBytesBigEndian, pubkeyToBytes, toHex } from '../core/encoding';
+import { signData } from '../core/crypto';
+import { MSG_SPECS } from '../protocol/spec';
 
 /** 220-byte Central Pubkey Empower message (协议定义为220字节) */
 export interface CentralPubkeyEmpowerMessage {
@@ -18,20 +20,31 @@ export interface CentralPubkeyEmpowerMessage {
  * If signatures are omitted, the last 128 bytes are zeroed.
  */
 export function serializeCentralPubkeyEmpower(msg: CentralPubkeyEmpowerMessage): Uint8Array {
-  const flowSig = msg.flowNodeSignature ? fromHex(msg.flowNodeSignature) : new Uint8Array(64);
+  const flowSig = msg.flowNodeSignature ? signatureToBytes(msg.flowNodeSignature) : new Uint8Array(64);
   const timestamp = msg.confirmTimestamp != null
     ? toBytesBigEndian(msg.confirmTimestamp, 8)
     : new Uint8Array(8);
-  const centralSig = msg.centralSignature ? fromHex(msg.centralSignature) : new Uint8Array(64);
+  const centralSig = msg.centralSignature ? signatureToBytes(msg.centralSignature) : new Uint8Array(64);
 
   return concat(
     toBytesBigEndian(MsgType.CENTRAL_KEY_AUTH, 2), // 2 bytes
     uuidToBytes(msg.uuid),                          // 16 bytes
-    fromHex(msg.flowNodePubkey),                    // 33 bytes
-    fromHex(msg.centralPubkey),                     // 33 bytes
+    pubkeyToBytes(msg.flowNodePubkey),              // 33 bytes
+    pubkeyToBytes(msg.centralPubkey),               // 33 bytes
     flowSig,                                         // 64 bytes
     timestamp,                                       // 8 bytes
     centralSig,                                      // 64 bytes
+  );
+}
+
+export const serializeCentralPubkeyEmpowerFullMessage = serializeCentralPubkeyEmpower;
+
+export function serializeCentralPubkeyEmpowerSubmitPayload(
+  msg: CentralPubkeyEmpowerMessage & { flowNodeSignature: Signature },
+): Uint8Array {
+  return concat(
+    buildCentralPubkeyEmpowerPayload(msg),
+    signatureToBytes(msg.flowNodeSignature),
   );
 }
 
@@ -47,9 +60,21 @@ export function buildCentralPubkeyEmpowerPayload(params: {
   return concat(
     toBytesBigEndian(MsgType.CENTRAL_KEY_AUTH, 2),
     uuidToBytes(params.uuid),
-    fromHex(params.flowNodePubkey),
-    fromHex(params.centralPubkey),
+    pubkeyToBytes(params.flowNodePubkey),
+    pubkeyToBytes(params.centralPubkey),
   );
+}
+
+export const buildCentralPubkeyEmpowerPreSignPayload = buildCentralPubkeyEmpowerPayload;
+
+export async function signCentralPubkeyEmpowerPayload(
+  payload: Uint8Array,
+  privateKeyHex: string,
+): Promise<Signature> {
+  if (payload.length !== MSG_SPECS.CENTRAL_KEY_AUTH.preSignLength) {
+    throw new Error(`Central pubkey empower payload must be ${MSG_SPECS.CENTRAL_KEY_AUTH.preSignLength} bytes, got ${payload.length}`);
+  }
+  return toHex(await signData(payload, privateKeyHex)) as Signature;
 }
 
 /**
@@ -66,9 +91,9 @@ export function buildCentralPubkeyEmpowerFullPayload(params: {
   return concat(
     toBytesBigEndian(MsgType.CENTRAL_KEY_AUTH, 2),
     uuidToBytes(params.uuid),
-    fromHex(params.flowNodePubkey),
-    fromHex(params.centralPubkey),
-    fromHex(params.flowNodeSignature),
+    pubkeyToBytes(params.flowNodePubkey),
+    pubkeyToBytes(params.centralPubkey),
+    signatureToBytes(params.flowNodeSignature),
     toBytesBigEndian(params.confirmTimestamp, 8),
   );
 }

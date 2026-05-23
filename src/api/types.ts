@@ -1,6 +1,6 @@
-import type { Pubkey, Signature, UUID, HexString } from '../core/types';
+import type { Pubkey, Signature, HexString } from '../core/types';
 
-export interface FlowNodeRegisterMsg {
+export interface FlowNodeRegisterMsgRaw {
   id: string;
   msgType: number;
   registerDifficultyTarget: HexString;
@@ -11,7 +11,9 @@ export interface FlowNodeRegisterMsg {
   txid: HexString;
 }
 
-export interface CentralPubkeyEmpowerMsg {
+export type FlowNodeRegisterMsg = FlowNodeRegisterMsgRaw;
+
+export interface CentralPubkeyEmpowerMsgRaw {
   id: string;
   msgType: number;
   flowNodePubkey: Pubkey;
@@ -23,7 +25,11 @@ export interface CentralPubkeyEmpowerMsg {
   txid: HexString;
 }
 
-export interface CentralPubkeyLockedMsg {
+export interface CentralPubkeyEmpowerMsg extends Omit<CentralPubkeyEmpowerMsgRaw, 'confirmTimestamp'> {
+  confirmTimestamp: bigint;
+}
+
+export interface CentralPubkeyLockedMsgRaw {
   id: string;
   msgType: number;
   centralPubkey: Pubkey;
@@ -34,7 +40,11 @@ export interface CentralPubkeyLockedMsg {
   txid: HexString;
 }
 
-export interface FlowNodeLockedMsg {
+export interface CentralPubkeyLockedMsg extends Omit<CentralPubkeyLockedMsgRaw, 'confirmTimestamp'> {
+  confirmTimestamp: bigint;
+}
+
+export interface FlowNodeLockedMsgRaw {
   id: string;
   msgType: number;
   flowNodePubkey: Pubkey;
@@ -46,7 +56,11 @@ export interface FlowNodeLockedMsg {
   txid: HexString;
 }
 
-export interface TransactionRecordMsg {
+export interface FlowNodeLockedMsg extends Omit<FlowNodeLockedMsgRaw, 'confirmTimestamp'> {
+  confirmTimestamp: bigint;
+}
+
+export interface TransactionRecordMsgRaw {
   id: string;
   msgType: number;
   amount: number;
@@ -64,7 +78,12 @@ export interface TransactionRecordMsg {
   txid: HexString;
 }
 
-export interface TransactionMountMsg {
+export interface TransactionRecordMsg extends Omit<TransactionRecordMsgRaw, 'amount' | 'confirmTimestamp'> {
+  amount: bigint;
+  confirmTimestamp: bigint;
+}
+
+export interface TransactionMountMsgRaw {
   id: string;
   msgType: number;
   mountedTransactionRecordId: string;
@@ -81,7 +100,11 @@ export interface TransactionMountMsg {
   txid: HexString;
 }
 
-export interface BlockInfo {
+export interface TransactionMountMsg extends Omit<TransactionMountMsgRaw, 'confirmTimestamp'> {
+  confirmTimestamp: bigint;
+}
+
+export interface BlockInfoRaw {
   id: string;
   version: number;
   height: number;
@@ -99,7 +122,13 @@ export interface BlockInfo {
   rawBytes: HexString;
 }
 
-export interface ConsumeChain {
+export interface BlockInfo extends Omit<BlockInfoRaw, 'height' | 'maxMsgTimestamp' | 'timestamp'> {
+  height: bigint;
+  maxMsgTimestamp: bigint;
+  timestamp: bigint;
+}
+
+export interface ConsumeChainRaw {
   id: string;
   start: string;
   end: string;
@@ -109,7 +138,12 @@ export interface ConsumeChain {
   tailMountTimestamp: number;
 }
 
-export interface ConsumeChainEdge {
+export interface ConsumeChain extends Omit<ConsumeChainRaw, 'amount' | 'tailMountTimestamp'> {
+  amount: bigint;
+  tailMountTimestamp: bigint;
+}
+
+export interface ConsumeChainEdgeRaw {
   id: string;
   source: string;
   target: string;
@@ -122,16 +156,36 @@ export interface ConsumeChainEdge {
   isLoop: boolean;
 }
 
+export interface ConsumeChainEdge extends Omit<ConsumeChainEdgeRaw, 'amount' | 'relatedTransactionMountTimestamp'> {
+  amount: bigint;
+  relatedTransactionMountTimestamp: bigint;
+}
+
+export interface ConsumeChainResponseDTORaw {
+  consumeChain: ConsumeChainRaw;
+  consumeChainEdges: ConsumeChainEdgeRaw[];
+}
+
 export interface ConsumeChainResponseDTO {
   consumeChain: ConsumeChain;
   consumeChainEdges: ConsumeChainEdge[];
 }
 
-export interface ReturningFlowRateResponseDTO {
+export interface ReturningFlowRateResponseDTORaw {
   returningFlowRate: number;
   loopedAmount: number;
   unloopedAmount: number;
   targetTotalLoopedAmount: number;
   targetTotalUnloopedAmount: number;
   currencyType: number;
+}
+
+export interface ReturningFlowRateResponseDTO extends Omit<
+  ReturningFlowRateResponseDTORaw,
+  'loopedAmount' | 'unloopedAmount' | 'targetTotalLoopedAmount' | 'targetTotalUnloopedAmount'
+> {
+  loopedAmount: bigint;
+  unloopedAmount: bigint;
+  targetTotalLoopedAmount: bigint;
+  targetTotalUnloopedAmount: bigint;
 }
