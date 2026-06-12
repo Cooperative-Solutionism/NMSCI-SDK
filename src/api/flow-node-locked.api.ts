@@ -1,7 +1,8 @@
 import { ApiClient, ApiResponse } from './client';
-import type { FlowNodeLockedMsgRaw } from './types';
+import type { FlowNodeLockedMsgRaw, LockedMessageResponseDTO } from './types';
 
 export type FlowNodeLockedMsgResponse = ApiResponse<FlowNodeLockedMsgRaw>;
+export type FlowNodeLockedMsgLookupResponse = ApiResponse<LockedMessageResponseDTO<FlowNodeLockedMsgRaw>>;
 
 export async function sendFlowNodeLockedMsg(
   client: ApiClient,
@@ -20,6 +21,8 @@ export async function getFlowNodeLockedMsgById(
 export async function getFlowNodeLockedMsgByFlowNodePubkey(
   client: ApiClient,
   flowNodePubkey: string,
-): Promise<ApiResponse<FlowNodeLockedMsgRaw>> {
-  return client.get<FlowNodeLockedMsgRaw>(`/flow-node-locked-msg/flow-node-pubkey/${encodeURIComponent(flowNodePubkey)}`);
+): Promise<ApiResponse<LockedMessageResponseDTO<FlowNodeLockedMsgRaw>>> {
+  return client.get<LockedMessageResponseDTO<FlowNodeLockedMsgRaw>>(
+    `/flow-node-locked-msg/flow-node-pubkey/${encodeURIComponent(flowNodePubkey)}`,
+  );
 }

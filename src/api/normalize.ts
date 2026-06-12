@@ -16,8 +16,10 @@ import type {
   FlowNodeLockedMsgRaw,
   FlowNodeRegisterMsg,
   FlowNodeRegisterMsgRaw,
+  LockedMessageResponseDTO,
   ReturningFlowRateResponseDTO,
   ReturningFlowRateResponseDTORaw,
+  SliceResponseDTO,
   TransactionMountMsg,
   TransactionMountMsgRaw,
   TransactionRecordMsg,
@@ -39,6 +41,26 @@ export function normalizeApiResponseList<Raw, Normalized>(
   normalizeData: (data: Raw) => Normalized,
 ): ApiResponse<Normalized[]> {
   return normalizeApiResponse(response, items => items.map(normalizeData));
+}
+
+export function normalizeApiResponseSlice<Raw, Normalized>(
+  response: ApiResponse<SliceResponseDTO<Raw>>,
+  normalizeData: (data: Raw) => Normalized,
+): ApiResponse<SliceResponseDTO<Normalized>> {
+  return normalizeApiResponse(response, slice => ({
+    ...slice,
+    content: slice.content.map(normalizeData),
+  }));
+}
+
+export function normalizeLockedMessageResponseDTO<Raw, Normalized>(
+  raw: LockedMessageResponseDTO<Raw>,
+  normalizeData: (data: Raw) => Normalized,
+): LockedMessageResponseDTO<Normalized> {
+  return {
+    locked: raw.locked,
+    lockedMsg: raw.lockedMsg === null ? null : normalizeData(raw.lockedMsg),
+  };
 }
 
 export function normalizeFlowNodeRegisterMsg(raw: FlowNodeRegisterMsgRaw): FlowNodeRegisterMsg {
@@ -119,19 +141,7 @@ export function normalizeConsumeChainResponseDTO(raw: ConsumeChainResponseDTORaw
 export function normalizeReturningFlowRateResponseDTO(
   raw: ReturningFlowRateResponseDTORaw,
 ): ReturningFlowRateResponseDTO {
-  return {
-    ...raw,
-    loopedAmount: toSafeBigInt(raw.loopedAmount, 'ReturningFlowRateResponseDTO.loopedAmount'),
-    unloopedAmount: toSafeBigInt(raw.unloopedAmount, 'ReturningFlowRateResponseDTO.unloopedAmount'),
-    targetTotalLoopedAmount: toSafeBigInt(
-      raw.targetTotalLoopedAmount,
-      'ReturningFlowRateResponseDTO.targetTotalLoopedAmount',
-    ),
-    targetTotalUnloopedAmount: toSafeBigInt(
-      raw.targetTotalUnloopedAmount,
-      'ReturningFlowRateResponseDTO.targetTotalUnloopedAmount',
-    ),
-  };
+  return raw;
 }
 
 function toSafeBigInt(value: number, fieldName: string): bigint {

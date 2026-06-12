@@ -2,6 +2,7 @@ export { ApiClient, ApiClientError } from './client';
 export type { ApiResponse, FetchLike, QueryParams, SdkConfig } from './client';
 export * from './types';
 export * from './normalize';
+export * from './flow-node.api';
 export * from './flow-node-register.api';
 export * from './central-pubkey-empower.api';
 export * from './central-pubkey-locked.api';

@@ -1,15 +1,21 @@
-import { ApiClient, ApiResponse } from './client';
-import type { ConsumeChainResponseDTORaw } from './types';
+import { ApiClient, ApiResponse, type QueryParams } from './client';
+import type { ConsumeChainResponseDTORaw, PageQuery, SliceResponseDTO } from './types';
 
 export type ConsumeChainResponse = ApiResponse<ConsumeChainResponseDTORaw>;
-export type ConsumeChainListResponse = ApiResponse<ConsumeChainResponseDTORaw[]>;
+export type ConsumeChainListResponse = ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>;
+
+export interface ConsumeChainQuery extends PageQuery {
+  isLoop?: boolean;
+}
 
 export async function getConsumeChainByMountedTransaction(
   client: ApiClient,
   relatedTransactionMount: string,
-): Promise<ApiResponse<ConsumeChainResponseDTORaw[]>> {
-  return client.get<ConsumeChainResponseDTORaw[]>('/consume-chain/by-mounted-transaction', {
+  pagination?: PageQuery,
+): Promise<ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>> {
+  return client.get<SliceResponseDTO<ConsumeChainResponseDTORaw>>('/consume-chain/by-mounted-transaction', {
     relatedTransactionMount,
+    ...pagination,
   });
 }
 
@@ -23,19 +29,32 @@ export async function getConsumeChainById(
 export async function getConsumeChainByStart(
   client: ApiClient,
   start: string,
-  isLoop?: boolean,
-): Promise<ApiResponse<ConsumeChainResponseDTORaw[]>> {
-  const params: Record<string, string | boolean> = { start };
-  if (isLoop !== undefined) params['isLoop'] = isLoop;
-  return client.get<ConsumeChainResponseDTORaw[]>('/consume-chain/by-start', params);
+  query?: boolean | ConsumeChainQuery,
+): Promise<ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>> {
+  return client.get<SliceResponseDTO<ConsumeChainResponseDTORaw>>(
+    '/consume-chain/by-start',
+    consumeChainQueryParams('start', start, query),
+  );
 }
 
 export async function getConsumeChainByEnd(
   client: ApiClient,
   end: string,
-  isLoop?: boolean,
-): Promise<ApiResponse<ConsumeChainResponseDTORaw[]>> {
-  const params: Record<string, string | boolean> = { end };
-  if (isLoop !== undefined) params['isLoop'] = isLoop;
-  return client.get<ConsumeChainResponseDTORaw[]>('/consume-chain/by-end', params);
+  query?: boolean | ConsumeChainQuery,
+): Promise<ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>> {
+  return client.get<SliceResponseDTO<ConsumeChainResponseDTORaw>>(
+    '/consume-chain/by-end',
+    consumeChainQueryParams('end', end, query),
+  );
+}
+
+function consumeChainQueryParams(
+  key: 'start' | 'end',
+  value: string,
+  query?: boolean | ConsumeChainQuery,
+): QueryParams {
+  if (typeof query === 'boolean') {
+    return { [key]: value, isLoop: query };
+  }
+  return { [key]: value, ...query };
 }

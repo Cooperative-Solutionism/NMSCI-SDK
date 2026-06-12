@@ -1,5 +1,32 @@
 import type { Pubkey, Signature, HexString } from '../core/types';
 
+export interface PageQuery {
+  [key: string]: string | number | boolean | undefined;
+  page?: number;
+  size?: number;
+}
+
+export interface SliceResponseDTO<T> {
+  content: T[];
+  page: number;
+  size: number;
+  numberOfElements: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
+
+export interface LockedMessageResponseDTO<T> {
+  locked: boolean;
+  lockedMsg: T | null;
+}
+
+export interface FlowNodeStateResponseDTO {
+  registered: boolean;
+  authorized: boolean;
+  locked: boolean;
+  currentCentralPubkeyAuthorized: boolean;
+}
+
 export interface FlowNodeRegisterMsgRaw {
   id: string;
   msgType: number;
@@ -180,12 +207,4 @@ export interface ReturningFlowRateResponseDTORaw {
   currencyType: number;
 }
 
-export interface ReturningFlowRateResponseDTO extends Omit<
-  ReturningFlowRateResponseDTORaw,
-  'loopedAmount' | 'unloopedAmount' | 'targetTotalLoopedAmount' | 'targetTotalUnloopedAmount'
-> {
-  loopedAmount: bigint;
-  unloopedAmount: bigint;
-  targetTotalLoopedAmount: bigint;
-  targetTotalUnloopedAmount: bigint;
-}
+export type ReturningFlowRateResponseDTO = ReturningFlowRateResponseDTORaw;

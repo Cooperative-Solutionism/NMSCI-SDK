@@ -140,7 +140,7 @@ const res = await client.post<T>('/path', bodyData);
 
 ### Raw 与 Normalized DTO
 
-后端 JSON 中的 `amount`、`confirmTimestamp`、`height` 等 64 位整数以 `number` 返回，可能超过 `Number.MAX_SAFE_INTEGER`。SDK 的函数式 API 保持 wire JSON 形态并返回 `*Raw` 类型；如需 bigint，可显式调用 normalize 函数：
+后端 JSON 中的 `amount`、`confirmTimestamp`、`height` 等 64 位整数以 `number` 返回，可能超过 `Number.MAX_SAFE_INTEGER`。SDK 的函数式 API 保持 wire JSON 形态并返回 `*Raw` 类型；如需 bigint，可显式调用 normalize 函数。`ReturningFlowRateResponseDTO` 的金额指标是后端 `double`，normalize 后仍保持 `number`。
 
 ```typescript
 import {
@@ -155,7 +155,7 @@ const normalized = normalizeApiResponse(raw, normalizeTransactionRecordMsg); // 
 // normalized.data.amount 与 normalized.data.confirmTimestamp 均为 bigint
 ```
 
-如果原始 number 已超过安全整数范围，normalize 会抛错，避免把已经丢精度的值静默转换成 bigint。difficulty target 保持 hex string，与后端序列化保持一致。
+如果需要规范化分页查询结果，可使用 `normalizeApiResponseSlice(response, normalizeItem)`；冻结状态查询的 `locked/lockedMsg` 包装可使用 `normalizeLockedMessageResponseDTO(raw, normalizeItem)`。如果原始 number 已超过安全整数范围，normalize 会抛错，避免把已经丢精度的值静默转换成 bigint。difficulty target 保持 hex string，与后端序列化保持一致。
 
 ### 组合型 SDK
 
@@ -167,7 +167,8 @@ import { NmsciSdk } from '@nmsci/sdk';
 const sdk = new NmsciSdk({ baseUrl: 'http://localhost:8080' });
 
 await sdk.flowNodeRegister.send(submitPayload);
-await sdk.transactionRecord.getByFlowNodePubkey(flowNodePubkey);
+await sdk.flowNode.getState(flowNodePubkey);
+await sdk.transactionRecord.getByFlowNodePubkey(flowNodePubkey, { page: 0, size: 50 });
 await sdk.returningFlowRate.getByPubkey({ target: flowNodePubkey, currencyType: 1 });
 ```
 
@@ -608,6 +609,13 @@ const fullBytes = serializeTransactionMountFullMessage(msg); // 341 字节，用
 { code: 200, message: 'Success', data: T }
 ```
 
+### 流转节点状态
+
+```typescript
+// 按流转节点公钥查询注册/授权/冻结状态
+getFlowNodeState(client, flowNodePubkey: string): Promise<ApiResponse<FlowNodeStateResponseDTO>>
+```
+
 ### 流转节点注册
 
 ```typescript
@@ -639,13 +647,13 @@ getCentralPubkeyEmpowerMsgByFlowNodePubkey(client, flowNodePubkey: string): Prom
 
 ```typescript
 // 发送冻结信息（成功后无响应体）
-sendCentralPubkeyLockedMsg(client, byteArray: number[]): Promise<ApiResponse<void>>
+sendCentralPubkeyLockedMsg(client, byteArray: number[]): Promise<void>
 
 // 按 UUID 查询
 getCentralPubkeyLockedMsgById(client, id: string): Promise<ApiResponse<CentralPubkeyLockedMsgRaw>>
 
 // 按中心公钥查询
-getCentralPubkeyLockedMsgByCentralPubkey(client, centralPubkey: string): Promise<ApiResponse<CentralPubkeyLockedMsgRaw>>
+getCentralPubkeyLockedMsgByCentralPubkey(client, centralPubkey: string): Promise<ApiResponse<LockedMessageResponseDTO<CentralPubkeyLockedMsgRaw>>>
 ```
 
 ### 流转节点冻结
@@ -658,7 +666,7 @@ sendFlowNodeLockedMsg(client, byteArray: number[]): Promise<ApiResponse<FlowNode
 getFlowNodeLockedMsgById(client, id: string): Promise<ApiResponse<FlowNodeLockedMsgRaw>>
 
 // 按流转节点公钥查询
-getFlowNodeLockedMsgByFlowNodePubkey(client, flowNodePubkey: string): Promise<ApiResponse<FlowNodeLockedMsgRaw>>
+getFlowNodeLockedMsgByFlowNodePubkey(client, flowNodePubkey: string): Promise<ApiResponse<LockedMessageResponseDTO<FlowNodeLockedMsgRaw>>>
 ```
 
 ### 交易记录
@@ -670,14 +678,14 @@ sendTransactionRecordMsg(client, byteArray: number[]): Promise<ApiResponse<Trans
 // 按 UUID 查询
 getTransactionRecordMsgById(client, id: string): Promise<ApiResponse<TransactionRecordMsgRaw>>
 
-// 按消费节点公钥查询（返回列表）
-getTransactionRecordMsgByConsumeNodePubkey(client, consumeNodePubkey: string): Promise<ApiResponse<TransactionRecordMsgRaw[]>>
+// 按消费节点公钥查询（返回分页 Slice）
+getTransactionRecordMsgByConsumeNodePubkey(client, consumeNodePubkey: string, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<TransactionRecordMsgRaw>>>
 
-// 按流转节点公钥查询（返回列表）
-getTransactionRecordMsgByFlowNodePubkey(client, flowNodePubkey: string): Promise<ApiResponse<TransactionRecordMsgRaw[]>>
+// 按流转节点公钥查询（返回分页 Slice）
+getTransactionRecordMsgByFlowNodePubkey(client, flowNodePubkey: string, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<TransactionRecordMsgRaw>>>
 
-// 按双方公钥查询（返回列表）
-getTransactionRecordMsgByBothPubkeys(client, consumeNodePubkey: string, flowNodePubkey: string): Promise<ApiResponse<TransactionRecordMsgRaw[]>>
+// 按双方公钥查询（返回分页 Slice）
+getTransactionRecordMsgByBothPubkeys(client, consumeNodePubkey: string, flowNodePubkey: string, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<TransactionRecordMsgRaw>>>
 ```
 
 ### 交易挂载
@@ -692,14 +700,14 @@ getTransactionMountMsgById(client, id: string): Promise<ApiResponse<TransactionM
 // 按被挂载的交易记录 ID 查询
 getTransactionMountMsgByMountedTransactionRecordId(client, id: string): Promise<ApiResponse<TransactionMountMsgRaw>>
 
-// 按消费节点公钥查询（返回列表）
-getTransactionMountMsgByConsumeNodePubkey(client, consumeNodePubkey: string): Promise<ApiResponse<TransactionMountMsgRaw[]>>
+// 按消费节点公钥查询（返回分页 Slice）
+getTransactionMountMsgByConsumeNodePubkey(client, consumeNodePubkey: string, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<TransactionMountMsgRaw>>>
 
-// 按流转节点公钥查询（返回列表）
-getTransactionMountMsgByFlowNodePubkey(client, flowNodePubkey: string): Promise<ApiResponse<TransactionMountMsgRaw[]>>
+// 按流转节点公钥查询（返回分页 Slice）
+getTransactionMountMsgByFlowNodePubkey(client, flowNodePubkey: string, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<TransactionMountMsgRaw>>>
 
-// 按双方公钥查询（返回列表）
-getTransactionMountMsgByBothPubkeys(client, consumeNodePubkey: string, flowNodePubkey: string): Promise<ApiResponse<TransactionMountMsgRaw[]>>
+// 按双方公钥查询（返回分页 Slice）
+getTransactionMountMsgByBothPubkeys(client, consumeNodePubkey: string, flowNodePubkey: string, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<TransactionMountMsgRaw>>>
 ```
 
 ### 区块链
@@ -719,18 +727,18 @@ getBlockByHash(client, hash: string): Promise<ApiResponse<BlockInfoRaw>>  // has
 
 ```typescript
 // 按关联交易挂载记录查询
-getConsumeChainByMountedTransaction(client, relatedTransactionMount: string): Promise<ApiResponse<ConsumeChainResponseDTORaw[]>>
+getConsumeChainByMountedTransaction(client, relatedTransactionMount: string, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>>
 
 // 按消费链 UUID 查询
 getConsumeChainById(client, id: string): Promise<ApiResponse<ConsumeChainResponseDTORaw>>
 
 // 按起点查询
-getConsumeChainByStart(client, start: string, isLoop?: boolean): Promise<ApiResponse<ConsumeChainResponseDTORaw[]>>
+getConsumeChainByStart(client, start: string, query?: boolean | ConsumeChainQuery): Promise<ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>>
 // start: 起点流转节点 UUID
-// isLoop: 可选，true=仅返回已成环，false=仅返回未成环，不传=全部
+// query: 可传旧版 boolean isLoop；也可传 { isLoop, page, size }
 
 // 按终点查询
-getConsumeChainByEnd(client, end: string, isLoop?: boolean): Promise<ApiResponse<ConsumeChainResponseDTORaw[]>>
+getConsumeChainByEnd(client, end: string, query?: boolean | ConsumeChainQuery): Promise<ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>>
 // end: 终点流转节点 UUID
 ```
 

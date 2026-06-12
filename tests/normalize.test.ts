@@ -104,7 +104,7 @@ describe('API DTO normalization', () => {
     };
 
     expect(normalizeBlockInfo(blockRaw).height).toBe(10n);
-    expect(normalizeReturningFlowRateResponseDTO(rateRaw).targetTotalUnloopedAmount).toBe(4n);
+    expect(normalizeReturningFlowRateResponseDTO(rateRaw).targetTotalUnloopedAmount).toBe(4);
   });
 
   it('normalizes ApiResponse data generically', () => {

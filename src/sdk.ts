@@ -20,6 +20,7 @@ import {
   getConsumeChainByMountedTransaction,
   getConsumeChainByStart,
 } from './api/consume-chain.api';
+import { getFlowNodeState } from './api/flow-node.api';
 import {
   getFlowNodeLockedMsgByFlowNodePubkey,
   getFlowNodeLockedMsgById,
@@ -53,6 +54,10 @@ import {
 export class NmsciSdk {
   readonly client: ApiClient;
 
+  readonly flowNode = {
+    getState: (flowNodePubkey: string) => getFlowNodeState(this.client, flowNodePubkey),
+  };
+
   readonly flowNodeRegister = {
     send: (body: Uint8Array | number[]) => sendFlowNodeRegisterMsg(this.client, body),
     getById: (id: string) => getFlowNodeRegisterMsgById(this.client, id),
@@ -80,18 +85,38 @@ export class NmsciSdk {
   readonly transactionRecord = {
     send: (body: Uint8Array | number[]) => sendTransactionRecordMsg(this.client, body),
     getById: (id: string) => getTransactionRecordMsgById(this.client, id),
-    getByConsumeNodePubkey: (consumeNodePubkey: string) => getTransactionRecordMsgByConsumeNodePubkey(this.client, consumeNodePubkey),
-    getByFlowNodePubkey: (flowNodePubkey: string) => getTransactionRecordMsgByFlowNodePubkey(this.client, flowNodePubkey),
-    getByBothPubkeys: (consumeNodePubkey: string, flowNodePubkey: string) => getTransactionRecordMsgByBothPubkeys(this.client, consumeNodePubkey, flowNodePubkey),
+    getByConsumeNodePubkey: (
+      consumeNodePubkey: string,
+      pagination?: Parameters<typeof getTransactionRecordMsgByConsumeNodePubkey>[2],
+    ) => getTransactionRecordMsgByConsumeNodePubkey(this.client, consumeNodePubkey, pagination),
+    getByFlowNodePubkey: (
+      flowNodePubkey: string,
+      pagination?: Parameters<typeof getTransactionRecordMsgByFlowNodePubkey>[2],
+    ) => getTransactionRecordMsgByFlowNodePubkey(this.client, flowNodePubkey, pagination),
+    getByBothPubkeys: (
+      consumeNodePubkey: string,
+      flowNodePubkey: string,
+      pagination?: Parameters<typeof getTransactionRecordMsgByBothPubkeys>[3],
+    ) => getTransactionRecordMsgByBothPubkeys(this.client, consumeNodePubkey, flowNodePubkey, pagination),
   };
 
   readonly transactionMount = {
     send: (body: Uint8Array | number[]) => sendTransactionMountMsg(this.client, body),
     getById: (id: string) => getTransactionMountMsgById(this.client, id),
     getByMountedTransactionRecordId: (id: string) => getTransactionMountMsgByMountedTransactionRecordId(this.client, id),
-    getByConsumeNodePubkey: (consumeNodePubkey: string) => getTransactionMountMsgByConsumeNodePubkey(this.client, consumeNodePubkey),
-    getByFlowNodePubkey: (flowNodePubkey: string) => getTransactionMountMsgByFlowNodePubkey(this.client, flowNodePubkey),
-    getByBothPubkeys: (consumeNodePubkey: string, flowNodePubkey: string) => getTransactionMountMsgByBothPubkeys(this.client, consumeNodePubkey, flowNodePubkey),
+    getByConsumeNodePubkey: (
+      consumeNodePubkey: string,
+      pagination?: Parameters<typeof getTransactionMountMsgByConsumeNodePubkey>[2],
+    ) => getTransactionMountMsgByConsumeNodePubkey(this.client, consumeNodePubkey, pagination),
+    getByFlowNodePubkey: (
+      flowNodePubkey: string,
+      pagination?: Parameters<typeof getTransactionMountMsgByFlowNodePubkey>[2],
+    ) => getTransactionMountMsgByFlowNodePubkey(this.client, flowNodePubkey, pagination),
+    getByBothPubkeys: (
+      consumeNodePubkey: string,
+      flowNodePubkey: string,
+      pagination?: Parameters<typeof getTransactionMountMsgByBothPubkeys>[3],
+    ) => getTransactionMountMsgByBothPubkeys(this.client, consumeNodePubkey, flowNodePubkey, pagination),
   };
 
   readonly block = {
@@ -101,10 +126,13 @@ export class NmsciSdk {
   };
 
   readonly consumeChain = {
-    getByMountedTransaction: (relatedTransactionMount: string) => getConsumeChainByMountedTransaction(this.client, relatedTransactionMount),
+    getByMountedTransaction: (
+      relatedTransactionMount: string,
+      pagination?: Parameters<typeof getConsumeChainByMountedTransaction>[2],
+    ) => getConsumeChainByMountedTransaction(this.client, relatedTransactionMount, pagination),
     getById: (id: string) => getConsumeChainById(this.client, id),
-    getByStart: (start: string, isLoop?: boolean) => getConsumeChainByStart(this.client, start, isLoop),
-    getByEnd: (end: string, isLoop?: boolean) => getConsumeChainByEnd(this.client, end, isLoop),
+    getByStart: (start: string, query?: Parameters<typeof getConsumeChainByStart>[2]) => getConsumeChainByStart(this.client, start, query),
+    getByEnd: (end: string, query?: Parameters<typeof getConsumeChainByEnd>[2]) => getConsumeChainByEnd(this.client, end, query),
   };
 
   readonly returningFlowRate = {

@@ -1,8 +1,8 @@
 import { ApiClient, ApiResponse } from './client';
-import type { TransactionMountMsgRaw } from './types';
+import type { PageQuery, SliceResponseDTO, TransactionMountMsgRaw } from './types';
 
 export type TransactionMountMsgResponse = ApiResponse<TransactionMountMsgRaw>;
-export type TransactionMountMsgListResponse = ApiResponse<TransactionMountMsgRaw[]>;
+export type TransactionMountMsgListResponse = ApiResponse<SliceResponseDTO<TransactionMountMsgRaw>>;
 
 export async function sendTransactionMountMsg(
   client: ApiClient,
@@ -28,21 +28,33 @@ export async function getTransactionMountMsgByMountedTransactionRecordId(
 export async function getTransactionMountMsgByConsumeNodePubkey(
   client: ApiClient,
   consumeNodePubkey: string,
-): Promise<ApiResponse<TransactionMountMsgRaw[]>> {
-  return client.get<TransactionMountMsgRaw[]>(`/transaction-mount-msg/consume-node-pubkey/${encodeURIComponent(consumeNodePubkey)}`);
+  pagination?: PageQuery,
+): Promise<ApiResponse<SliceResponseDTO<TransactionMountMsgRaw>>> {
+  return client.get<SliceResponseDTO<TransactionMountMsgRaw>>(
+    `/transaction-mount-msg/consume-node-pubkey/${encodeURIComponent(consumeNodePubkey)}`,
+    pagination,
+  );
 }
 
 export async function getTransactionMountMsgByFlowNodePubkey(
   client: ApiClient,
   flowNodePubkey: string,
-): Promise<ApiResponse<TransactionMountMsgRaw[]>> {
-  return client.get<TransactionMountMsgRaw[]>(`/transaction-mount-msg/flow-node-pubkey/${encodeURIComponent(flowNodePubkey)}`);
+  pagination?: PageQuery,
+): Promise<ApiResponse<SliceResponseDTO<TransactionMountMsgRaw>>> {
+  return client.get<SliceResponseDTO<TransactionMountMsgRaw>>(
+    `/transaction-mount-msg/flow-node-pubkey/${encodeURIComponent(flowNodePubkey)}`,
+    pagination,
+  );
 }
 
 export async function getTransactionMountMsgByBothPubkeys(
   client: ApiClient,
   consumeNodePubkey: string,
   flowNodePubkey: string,
-): Promise<ApiResponse<TransactionMountMsgRaw[]>> {
-  return client.get<TransactionMountMsgRaw[]>(`/transaction-mount-msg/${encodeURIComponent(consumeNodePubkey)}/${encodeURIComponent(flowNodePubkey)}`);
+  pagination?: PageQuery,
+): Promise<ApiResponse<SliceResponseDTO<TransactionMountMsgRaw>>> {
+  return client.get<SliceResponseDTO<TransactionMountMsgRaw>>(
+    `/transaction-mount-msg/${encodeURIComponent(consumeNodePubkey)}/${encodeURIComponent(flowNodePubkey)}`,
+    pagination,
+  );
 }

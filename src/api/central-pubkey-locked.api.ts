@@ -1,7 +1,8 @@
 import { ApiClient, ApiResponse } from './client';
-import type { CentralPubkeyLockedMsgRaw } from './types';
+import type { CentralPubkeyLockedMsgRaw, LockedMessageResponseDTO } from './types';
 
 export type CentralPubkeyLockedMsgResponse = ApiResponse<CentralPubkeyLockedMsgRaw>;
+export type CentralPubkeyLockedMsgLookupResponse = ApiResponse<LockedMessageResponseDTO<CentralPubkeyLockedMsgRaw>>;
 
 export async function sendCentralPubkeyLockedMsg(
   client: ApiClient,
@@ -20,6 +21,8 @@ export async function getCentralPubkeyLockedMsgById(
 export async function getCentralPubkeyLockedMsgByCentralPubkey(
   client: ApiClient,
   centralPubkey: string,
-): Promise<ApiResponse<CentralPubkeyLockedMsgRaw>> {
-  return client.get<CentralPubkeyLockedMsgRaw>(`/central-pubkey-locked-msg/central-pubkey/${encodeURIComponent(centralPubkey)}`);
+): Promise<ApiResponse<LockedMessageResponseDTO<CentralPubkeyLockedMsgRaw>>> {
+  return client.get<LockedMessageResponseDTO<CentralPubkeyLockedMsgRaw>>(
+    `/central-pubkey-locked-msg/central-pubkey/${encodeURIComponent(centralPubkey)}`,
+  );
 }

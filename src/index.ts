@@ -20,6 +20,10 @@ export type { ApiResponse, FetchLike, QueryParams, SdkConfig } from './api/clien
 export type {
   FlowNodeRegisterMsgRaw,
   FlowNodeRegisterMsg,
+  PageQuery,
+  SliceResponseDTO,
+  LockedMessageResponseDTO,
+  FlowNodeStateResponseDTO,
   CentralPubkeyEmpowerMsgRaw,
   CentralPubkeyEmpowerMsg,
   CentralPubkeyLockedMsgRaw,
@@ -44,6 +48,7 @@ export type {
 
 export * from './api/normalize';
 
+export * from './api/flow-node.api';
 export * from './api/flow-node-register.api';
 export * from './api/central-pubkey-empower.api';
 export * from './api/central-pubkey-locked.api';
