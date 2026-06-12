@@ -1,6 +1,6 @@
 {
   "name": "@nmsci/sdk",
-  "version": "0.1.5",
+  "version": "1.0.0",
   "description": "NMSCI (Numerical Measurement System for Consumption Intention) SDK — TypeScript library for interacting with the NMSCI REST API",
   "type": "module",
   "main": "./dist/index.cjs",
