@@ -20,6 +20,12 @@ import type {
   ReturningFlowRateResponseDTO,
   ReturningFlowRateResponseDTORaw,
   SliceResponseDTO,
+  StorageStatusDTO,
+  StorageStatusDTORaw,
+  SystemParamsDTO,
+  SystemParamsDTORaw,
+  SystemStatusDTO,
+  SystemStatusDTORaw,
   TransactionMountMsg,
   TransactionMountMsgRaw,
   TransactionRecordMsg,
@@ -142,6 +148,39 @@ export function normalizeReturningFlowRateResponseDTO(
   raw: ReturningFlowRateResponseDTORaw,
 ): ReturningFlowRateResponseDTO {
   return raw;
+}
+
+export function normalizeSystemParams(raw: SystemParamsDTORaw): SystemParamsDTO {
+  return {
+    ...raw,
+    latestBlockHeight: toSafeBigIntOrNull(raw.latestBlockHeight, 'SystemParamsDTO.latestBlockHeight'),
+  };
+}
+
+export function normalizeSystemStatus(raw: SystemStatusDTORaw): SystemStatusDTO {
+  return {
+    ...raw,
+    latestBlockHeight: toSafeBigIntOrNull(raw.latestBlockHeight, 'SystemStatusDTO.latestBlockHeight'),
+    latestBlockTimestamp: toSafeBigIntOrNull(raw.latestBlockTimestamp, 'SystemStatusDTO.latestBlockTimestamp'),
+    pendingMessageCount: toSafeBigInt(raw.pendingMessageCount, 'SystemStatusDTO.pendingMessageCount'),
+    oldestPendingConfirmTimestamp: toSafeBigIntOrNull(
+      raw.oldestPendingConfirmTimestamp,
+      'SystemStatusDTO.oldestPendingConfirmTimestamp',
+    ),
+  };
+}
+
+export function normalizeStorageStatus(raw: StorageStatusDTORaw): StorageStatusDTO {
+  return {
+    ...raw,
+    currentDatFileSizeBytes: toSafeBigInt(raw.currentDatFileSizeBytes, 'StorageStatusDTO.currentDatFileSizeBytes'),
+    totalDatBytes: toSafeBigInt(raw.totalDatBytes, 'StorageStatusDTO.totalDatBytes'),
+    datMaxSizePerFileBytes: toSafeBigInt(raw.datMaxSizePerFileBytes, 'StorageStatusDTO.datMaxSizePerFileBytes'),
+  };
+}
+
+function toSafeBigIntOrNull(value: number | null, fieldName: string): bigint | null {
+  return value === null ? null : toSafeBigInt(value, fieldName);
 }
 
 function toSafeBigInt(value: number, fieldName: string): bigint {

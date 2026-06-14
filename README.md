@@ -4,7 +4,7 @@
 
 提供与 NMSCI 后端 REST API 交互的完整能力，包括消息构造、签名、PoW 挖矿、区块链查询等功能。
 
-> **参考文档**：`api-docs/NMSCI/openapi.yaml`（位于项目根目录）
+> **参考文档**：后端 API 参考见 NMSCI 仓库的 `docs/API.md`；协议字节布局见 `PROTOCOL.md`。
 
 ---
 
@@ -46,11 +46,11 @@ import { ApiClient } from '@nmsci/sdk';
 const client = new ApiClient({ baseUrl: 'http://localhost:8080' });
 
 // 查询最新区块
-const { data: block } = await client.get('/block-chain/last');
+const { data: block } = await client.get('/blocks/latest');
 console.log('Latest block height:', block.height);
 
 // 发送原始字节数据
-const res = await client.postBinary('/flow-node-register-msg/send', bytes);
+const res = await client.postBinary('/flow-node-registrations', bytes);
 ```
 
 ---
@@ -169,7 +169,7 @@ const sdk = new NmsciSdk({ baseUrl: 'http://localhost:8080' });
 await sdk.flowNodeRegister.send(submitPayload);
 await sdk.flowNode.getState(flowNodePubkey);
 await sdk.transactionRecord.getByFlowNodePubkey(flowNodePubkey, { page: 0, size: 50 });
-await sdk.returningFlowRate.getByPubkey({ target: flowNodePubkey, currencyType: 1 });
+await sdk.returningFlowRate.getByPubkey({ targetPubkey: flowNodePubkey, currencyType: 1 });
 ```
 
 也可以按子路径导入：
@@ -315,7 +315,7 @@ msg.flowNodeSignature = toHex(sig) as Signature;
 const bytes = serializeFlowNodeRegister(msg);
 
 // 5. 提交（ArrayBuffer → number[]）
-const res = await client.postBinary('/flow-node-register-msg/send', bytes);
+const res = await client.postBinary('/flow-node-registrations', bytes);
 ```
 
 **字段布局（123 字节）：**
@@ -363,7 +363,7 @@ const fullPayload = buildCentralPubkeyEmpowerFullPayload({
 });
 msg.centralSignature = toHex(await signData(fullPayload, centralPrivateKey)) as Signature;
 
-await client.postBinary('/central-pubkey-empower-msg/send', serializeCentralPubkeyEmpowerSubmitPayload(msg));
+await client.postBinary('/central-pubkey-empowerments', serializeCentralPubkeyEmpowerSubmitPayload(msg));
 const fullBytes = serializeCentralPubkeyEmpowerFullMessage(msg); // 220 字节，用于校验后端 rawBytes
 ```
 
@@ -397,7 +397,7 @@ const fullPayload = buildCentralPubkeyLockedFullPayload({
 });
 msg.centralSignature = toHex(await signData(fullPayload, centralPrivateKey)) as Signature;
 
-await client.postBinary('/central-pubkey-locked-msg/send', serializeCentralPubkeyLockedSubmitPayload(msg));
+await client.postBinary('/central-pubkey-locks', serializeCentralPubkeyLockedSubmitPayload(msg));
 const fullBytes = serializeCentralPubkeyLockedFullMessage(msg); // 187 字节，用于校验后端 rawBytes
 // 注意：此接口成功时无响应体（void）
 ```
@@ -435,7 +435,7 @@ const fullPayload = buildFlowNodeLockedFullPayload({
 });
 msg.centralSignature = toHex(await signData(fullPayload, centralPrivateKey)) as Signature;
 
-await client.postBinary('/flow-node-locked-msg/send', serializeFlowNodeLockedSubmitPayload(msg));
+await client.postBinary('/flow-node-locks', serializeFlowNodeLockedSubmitPayload(msg));
 const fullBytes = serializeFlowNodeLockedFullMessage(msg); // 220 字节，用于校验后端 rawBytes
 ```
 
@@ -523,7 +523,7 @@ const msg = {
   centralSignature: toHex(centralSig) as Signature,
 };
 
-await client.postBinary('/transaction-record-msg/send', serializeTransactionRecordSubmitPayload(msg));
+await client.postBinary('/transaction-records', serializeTransactionRecordSubmitPayload(msg));
 const fullBytes = serializeTransactionRecordFullMessage(msg); // 335 字节，用于校验后端 rawBytes
 ```
 
@@ -595,7 +595,7 @@ const msg = {
   centralSignature: toHex(centralSig) as Signature,
 };
 
-await client.postBinary('/transaction-mount-msg/send', serializeTransactionMountSubmitPayload(msg));
+await client.postBinary('/transaction-mounts', serializeTransactionMountSubmitPayload(msg));
 const fullBytes = serializeTransactionMountFullMessage(msg); // 341 字节，用于校验后端 rawBytes
 ```
 
@@ -614,6 +614,9 @@ const fullBytes = serializeTransactionMountFullMessage(msg); // 341 字节，用
 ```typescript
 // 按流转节点公钥查询注册/授权/冻结状态
 getFlowNodeState(client, flowNodePubkey: string): Promise<ApiResponse<FlowNodeStateResponseDTO>>
+
+// 流转节点列表（分页，可按 registered/authorized/locked 过滤）
+listFlowNodes(client, query?: { registered?: boolean; authorized?: boolean; locked?: boolean } & PageQuery): Promise<ApiResponse<SliceResponseDTO<FlowNodeListItemDTORaw>>>
 ```
 
 ### 流转节点注册
@@ -625,8 +628,8 @@ sendFlowNodeRegisterMsg(client, byteArray: number[]): Promise<ApiResponse<FlowNo
 // 按 UUID 查询
 getFlowNodeRegisterMsgById(client, id: string): Promise<ApiResponse<FlowNodeRegisterMsgRaw>>
 
-// 按流转节点公钥查询
-getFlowNodeRegisterMsgByFlowNodePubkey(client, flowNodePubkey: string): Promise<ApiResponse<FlowNodeRegisterMsgRaw>>
+// 按流转节点公钥查询（集合根，返回分页 Slice）
+getFlowNodeRegisterMsgByFlowNodePubkey(client, flowNodePubkey: string, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<FlowNodeRegisterMsgRaw>>>
 // flowNodePubkey: 66字符十六进制字符串
 ```
 
@@ -639,8 +642,8 @@ sendCentralPubkeyEmpowerMsg(client, byteArray: number[]): Promise<ApiResponse<Ce
 // 按 UUID 查询
 getCentralPubkeyEmpowerMsgById(client, id: string): Promise<ApiResponse<CentralPubkeyEmpowerMsgRaw>>
 
-// 按流转节点公钥查询
-getCentralPubkeyEmpowerMsgByFlowNodePubkey(client, flowNodePubkey: string): Promise<ApiResponse<CentralPubkeyEmpowerMsgRaw>>
+// 按流转节点公钥查询（集合根，返回分页 Slice）
+getCentralPubkeyEmpowerMsgByFlowNodePubkey(client, flowNodePubkey: string, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<CentralPubkeyEmpowerMsgRaw>>>
 ```
 
 ### 中心公钥冻结
@@ -686,6 +689,9 @@ getTransactionRecordMsgByFlowNodePubkey(client, flowNodePubkey: string, paginati
 
 // 按双方公钥查询（返回分页 Slice）
 getTransactionRecordMsgByBothPubkeys(client, consumeNodePubkey: string, flowNodePubkey: string, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<TransactionRecordMsgRaw>>>
+
+// 通用检索集合根（过滤参数全部可选；currencyType/startTime/endTime，时间为微秒）
+searchTransactionRecordMsgs(client, filters?: { consumeNodePubkey?: string; flowNodePubkey?: string; currencyType?: number; startTime?: number; endTime?: number }, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<TransactionRecordMsgRaw>>>
 ```
 
 ### 交易挂载
@@ -697,8 +703,8 @@ sendTransactionMountMsg(client, byteArray: number[]): Promise<ApiResponse<Transa
 // 按 UUID 查询
 getTransactionMountMsgById(client, id: string): Promise<ApiResponse<TransactionMountMsgRaw>>
 
-// 按被挂载的交易记录 ID 查询
-getTransactionMountMsgByMountedTransactionRecordId(client, id: string): Promise<ApiResponse<TransactionMountMsgRaw>>
+// 按被挂载的交易记录 ID 查询（集合根，返回分页 Slice；命中为空返回空集合 + 200，而非旧版 404）
+getTransactionMountMsgByMountedTransactionRecordId(client, id: string, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<TransactionMountMsgRaw>>>
 
 // 按消费节点公钥查询（返回分页 Slice）
 getTransactionMountMsgByConsumeNodePubkey(client, consumeNodePubkey: string, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<TransactionMountMsgRaw>>>
@@ -708,6 +714,9 @@ getTransactionMountMsgByFlowNodePubkey(client, flowNodePubkey: string, paginatio
 
 // 按双方公钥查询（返回分页 Slice）
 getTransactionMountMsgByBothPubkeys(client, consumeNodePubkey: string, flowNodePubkey: string, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<TransactionMountMsgRaw>>>
+
+// 通用检索集合根（过滤参数全部可选；mountedTransactionRecordId/startTime/endTime，时间为微秒）
+searchTransactionMountMsgs(client, filters?: { consumeNodePubkey?: string; flowNodePubkey?: string; mountedTransactionRecordId?: string; startTime?: number; endTime?: number }, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<TransactionMountMsgRaw>>>
 ```
 
 ### 区块链
@@ -726,20 +735,29 @@ getBlockByHash(client, hash: string): Promise<ApiResponse<BlockInfoRaw>>  // has
 ### 消费链
 
 ```typescript
-// 按关联交易挂载记录查询
-getConsumeChainByMountedTransaction(client, relatedTransactionMount: string, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>>
-
 // 按消费链 UUID 查询
 getConsumeChainById(client, id: string): Promise<ApiResponse<ConsumeChainResponseDTORaw>>
 
-// 按起点查询
-getConsumeChainByStart(client, start: string, query?: boolean | ConsumeChainQuery): Promise<ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>>
-// start: 起点流转节点 UUID
-// query: 可传旧版 boolean isLoop；也可传 { isLoop, page, size }
+// 集合根（分页）：id 模式（startId/endId/nodeId）与 pubkey 模式（startPubkey/endPubkey/nodePubkey）
+// 不可混用，混用后端返回 400
+queryConsumeChains(client, filters?: {
+  startId?: string; endId?: string; nodeId?: string;
+  startPubkey?: string; endPubkey?: string; nodePubkey?: string;
+  isLoop?: boolean; mountedTransactionId?: string;
+}, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>>
 
-// 按终点查询
-getConsumeChainByEnd(client, end: string, query?: boolean | ConsumeChainQuery): Promise<ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>>
-// end: 终点流转节点 UUID
+// 便捷封装（均走集合根；startId/endId/nodeId 为流转节点 UUID）
+getConsumeChainByStart(client, startId: string, query?: boolean | ConsumeChainQuery): Promise<ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>>
+getConsumeChainByEnd(client, endId: string, query?: boolean | ConsumeChainQuery): Promise<ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>>
+getConsumeChainByNode(client, nodeId: string, query?: boolean | ConsumeChainQuery): Promise<ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>>
+getConsumeChainByMountedTransaction(client, mountedTransactionId: string, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>>
+
+// 边查询（流入某 target 的边集合，非分页）；target 必填（id 或 pubkey 二选一，不可混用）
+getConsumeChainEdges(client, params: {
+  targetId?: string; targetPubkey?: string;     // 必填其一
+  sourceId?: string; sourcePubkey?: string;
+  currencyType?: number; startTime?: number; endTime?: number;  // 时间为微秒
+}): Promise<ApiResponse<ConsumeChainEdgeRaw[]>>
 ```
 
 ### 回流率
@@ -756,8 +774,8 @@ getReturningFlowRateById(client, {
 
 // 按公钥查询
 getReturningFlowRateByPubkey(client, {
-  source?,       // 可选：源流转节点公钥（空则查询总滞留指数）
-  target,        // 必填：目标流转节点公钥
+  sourcePubkey?, // 可选：源流转节点公钥（空则查询总滞留指数）
+  targetPubkey,  // 必填：目标流转节点公钥
   startTime?,
   endTime?,
   currencyType?,
@@ -771,6 +789,37 @@ getReturningFlowRateByPubkey(client, {
 // targetTotalUnloopedAmount = target 节点所有未成环金额（总滞留指数）
 // currencyType              = 货币类型
 ```
+
+### 系统
+
+```typescript
+// 系统参数（版本、中心公钥、难度、源码包哈希、最新区块）
+getSystemParams(client): Promise<ApiResponse<SystemParamsDTORaw>>
+
+// 运行状态（最新区块、未入块消息数、最早未确认时间戳、区块间隔毫秒、中心公钥是否冻结）
+getSystemStatus(client): Promise<ApiResponse<SystemStatusDTORaw>>
+
+// .dat 存储用量（目录、文件数、当前文件大小、总字节、单文件上限、利用率）
+getSystemStorage(client): Promise<ApiResponse<StorageStatusDTORaw>>
+```
+
+### 元数据
+
+```typescript
+// 消息类型（size=落库字节数，inboundSize=入站 POST 字节数）
+getMessageTypes(client): Promise<ApiResponse<MsgTypeMetadataDTO[]>>
+
+// 货币类型
+getCurrencyTypes(client): Promise<ApiResponse<CurrencyTypeMetadataDTO[]>>
+
+// 区块/存储格式常量
+getBlockFormat(client): Promise<ApiResponse<BlockFormatMetadataDTO>>
+
+// 当前注册/交易 PoW 难度（nbits 与解码后的目标阈值）
+getDifficulty(client): Promise<ApiResponse<DifficultyMetadataDTO>>
+```
+
+> 系统/存储的大整数字段（区块高度、微秒时间戳、存储字节等）以 wire JSON `number` 返回；如需 bigint，使用对应 `normalizeSystemStatus` / `normalizeStorageStatus` / `normalizeSystemParams`。
 
 ---
 
@@ -924,7 +973,7 @@ async function safeApiCall<T>(fn: () => Promise<{ code: number; message: string;
 }
 
 // 使用
-const block = await safeApiCall(() => client.get('/block-chain/last'));
+const block = await safeApiCall(() => client.get('/blocks/latest'));
 ```
 
 ---

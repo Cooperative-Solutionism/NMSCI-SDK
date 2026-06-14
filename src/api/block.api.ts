@@ -4,13 +4,13 @@ import type { BlockInfoRaw } from './types';
 export type BlockInfoResponse = ApiResponse<BlockInfoRaw>;
 
 export async function getLastBlock(client: ApiClient): Promise<ApiResponse<BlockInfoRaw>> {
-  return client.get<BlockInfoRaw>('/block-chain/last');
+  return client.get<BlockInfoRaw>('/blocks/latest');
 }
 
 export async function getBlockByHeight(client: ApiClient, height: number): Promise<ApiResponse<BlockInfoRaw>> {
-  return client.get<BlockInfoRaw>(`/block-chain/height/${height}`);
+  return client.get<BlockInfoRaw>(`/blocks/${height}`);
 }
 
 export async function getBlockByHash(client: ApiClient, hash: string): Promise<ApiResponse<BlockInfoRaw>> {
-  return client.get<BlockInfoRaw>(`/block-chain/hash/${encodeURIComponent(hash)}`);
+  return client.get<BlockInfoRaw>('/blocks', { hash });
 }

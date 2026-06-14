@@ -40,9 +40,9 @@ describe('current backend API contracts', () => {
     await getConsumeChainByStart(client, 'chain-start', { isLoop: false, page: 3, size: 5 });
 
     expect(requested).toEqual([
-      'https://example.test/transaction-record-msg/flow-node-pubkey/flow?page=2&size=10',
-      'https://example.test/transaction-mount-msg/consume/flow?page=1&size=25',
-      'https://example.test/consume-chain/by-start?start=chain-start&isLoop=false&page=3&size=5',
+      'https://example.test/transaction-records?flowNodePubkey=flow&page=2&size=10',
+      'https://example.test/transaction-mounts?consumeNodePubkey=consume&flowNodePubkey=flow&page=1&size=25',
+      'https://example.test/consume-chains?startId=chain-start&isLoop=false&page=3&size=5',
     ]);
   });
 
@@ -116,8 +116,8 @@ describe('current backend API contracts', () => {
     await sdk.flowNode.getState('02bb');
 
     expect(requested).toEqual([
-      'https://example.test/flow-node/state?flowNodePubkey=02aa',
-      'https://example.test/flow-node/state?flowNodePubkey=02bb',
+      'https://example.test/flow-nodes/02aa',
+      'https://example.test/flow-nodes/02bb',
     ]);
   });
 });

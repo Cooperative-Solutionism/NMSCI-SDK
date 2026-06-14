@@ -12,3 +12,5 @@ export * from './transaction-mount.api';
 export * from './block.api';
 export * from './consume-chain.api';
 export * from './returning-flow-rate.api';
+export * from './system.api';
+export * from './metadata.api';

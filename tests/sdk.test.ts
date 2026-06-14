@@ -35,6 +35,6 @@ describe('NmsciSdk', () => {
     const response = await sdk.block.getLast();
 
     expect(response.data.height).toBe(1);
-    expect(requested).toEqual(['https://example.test/block-chain/last']);
+    expect(requested).toEqual(['https://example.test/blocks/latest']);
   });
 });

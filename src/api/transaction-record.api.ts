@@ -4,18 +4,42 @@ import type { PageQuery, SliceResponseDTO, TransactionRecordMsgRaw } from './typ
 export type TransactionRecordMsgResponse = ApiResponse<TransactionRecordMsgRaw>;
 export type TransactionRecordMsgListResponse = ApiResponse<SliceResponseDTO<TransactionRecordMsgRaw>>;
 
+export interface TransactionRecordSearchFilters {
+  consumeNodePubkey?: string;
+  flowNodePubkey?: string;
+  currencyType?: number;
+  /** 微秒时间戳（含），过滤 confirmTimestamp。 */
+  startTime?: number;
+  /** 微秒时间戳（含），过滤 confirmTimestamp。 */
+  endTime?: number;
+}
+
 export async function sendTransactionRecordMsg(
   client: ApiClient,
   body: Uint8Array | number[],
 ): Promise<ApiResponse<TransactionRecordMsgRaw>> {
-  return client.postBinary<TransactionRecordMsgRaw>('/transaction-record-msg/send', body);
+  return client.postBinary<TransactionRecordMsgRaw>('/transaction-records', body);
 }
 
 export async function getTransactionRecordMsgById(
   client: ApiClient,
   id: string,
 ): Promise<ApiResponse<TransactionRecordMsgRaw>> {
-  return client.get<TransactionRecordMsgRaw>(`/transaction-record-msg/id/${encodeURIComponent(id)}`);
+  return client.get<TransactionRecordMsgRaw>(`/transaction-records/${encodeURIComponent(id)}`);
+}
+
+/**
+ * 交易记录检索集合根。所有过滤参数可选，全空即返回全量（分页）。
+ */
+export async function searchTransactionRecordMsgs(
+  client: ApiClient,
+  filters?: TransactionRecordSearchFilters,
+  pagination?: PageQuery,
+): Promise<ApiResponse<SliceResponseDTO<TransactionRecordMsgRaw>>> {
+  return client.get<SliceResponseDTO<TransactionRecordMsgRaw>>('/transaction-records', {
+    ...filters,
+    ...pagination,
+  });
 }
 
 export async function getTransactionRecordMsgByConsumeNodePubkey(
@@ -23,10 +47,7 @@ export async function getTransactionRecordMsgByConsumeNodePubkey(
   consumeNodePubkey: string,
   pagination?: PageQuery,
 ): Promise<ApiResponse<SliceResponseDTO<TransactionRecordMsgRaw>>> {
-  return client.get<SliceResponseDTO<TransactionRecordMsgRaw>>(
-    `/transaction-record-msg/consume-node-pubkey/${encodeURIComponent(consumeNodePubkey)}`,
-    pagination,
-  );
+  return searchTransactionRecordMsgs(client, { consumeNodePubkey }, pagination);
 }
 
 export async function getTransactionRecordMsgByFlowNodePubkey(
@@ -34,10 +55,7 @@ export async function getTransactionRecordMsgByFlowNodePubkey(
   flowNodePubkey: string,
   pagination?: PageQuery,
 ): Promise<ApiResponse<SliceResponseDTO<TransactionRecordMsgRaw>>> {
-  return client.get<SliceResponseDTO<TransactionRecordMsgRaw>>(
-    `/transaction-record-msg/flow-node-pubkey/${encodeURIComponent(flowNodePubkey)}`,
-    pagination,
-  );
+  return searchTransactionRecordMsgs(client, { flowNodePubkey }, pagination);
 }
 
 export async function getTransactionRecordMsgByBothPubkeys(
@@ -46,8 +64,5 @@ export async function getTransactionRecordMsgByBothPubkeys(
   flowNodePubkey: string,
   pagination?: PageQuery,
 ): Promise<ApiResponse<SliceResponseDTO<TransactionRecordMsgRaw>>> {
-  return client.get<SliceResponseDTO<TransactionRecordMsgRaw>>(
-    `/transaction-record-msg/${encodeURIComponent(consumeNodePubkey)}/${encodeURIComponent(flowNodePubkey)}`,
-    pagination,
-  );
+  return searchTransactionRecordMsgs(client, { consumeNodePubkey, flowNodePubkey }, pagination);
 }

@@ -8,21 +8,24 @@ export async function sendCentralPubkeyLockedMsg(
   client: ApiClient,
   body: Uint8Array | number[],
 ): Promise<void> {
-  return client.postBinaryNoResponse('/central-pubkey-locked-msg/send', body);
+  return client.postBinaryNoResponse('/central-pubkey-locks', body);
 }
 
 export async function getCentralPubkeyLockedMsgById(
   client: ApiClient,
   id: string,
 ): Promise<ApiResponse<CentralPubkeyLockedMsgRaw>> {
-  return client.get<CentralPubkeyLockedMsgRaw>(`/central-pubkey-locked-msg/id/${encodeURIComponent(id)}`);
+  return client.get<CentralPubkeyLockedMsgRaw>(`/central-pubkey-locks/${encodeURIComponent(id)}`);
 }
 
+/**
+ * 按中心公钥查询冻结状态，返回 { locked, lockedMsg } 包装。
+ */
 export async function getCentralPubkeyLockedMsgByCentralPubkey(
   client: ApiClient,
   centralPubkey: string,
 ): Promise<ApiResponse<LockedMessageResponseDTO<CentralPubkeyLockedMsgRaw>>> {
-  return client.get<LockedMessageResponseDTO<CentralPubkeyLockedMsgRaw>>(
-    `/central-pubkey-locked-msg/central-pubkey/${encodeURIComponent(centralPubkey)}`,
-  );
+  return client.get<LockedMessageResponseDTO<CentralPubkeyLockedMsgRaw>>('/central-pubkey-locks/status', {
+    centralPubkey,
+  });
 }

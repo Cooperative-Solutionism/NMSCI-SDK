@@ -44,6 +44,18 @@ export type {
   ConsumeChainResponseDTO,
   ReturningFlowRateResponseDTORaw,
   ReturningFlowRateResponseDTO,
+  FlowNodeListItemDTORaw,
+  SystemParamsDTORaw,
+  SystemParamsDTO,
+  SystemStatusDTORaw,
+  SystemStatusDTO,
+  StorageStatusDTORaw,
+  StorageStatusDTO,
+  MsgTypeMetadataDTO,
+  CurrencyTypeMetadataDTO,
+  BlockFormatMetadataDTO,
+  DifficultyMetadataDTO,
+  DifficultyTarget,
 } from './api/types';
 
 export * from './api/normalize';
@@ -58,3 +70,5 @@ export * from './api/transaction-mount.api';
 export * from './api/block.api';
 export * from './api/consume-chain.api';
 export * from './api/returning-flow-rate.api';
+export * from './api/system.api';
+export * from './api/metadata.api';
