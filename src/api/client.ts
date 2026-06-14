@@ -39,7 +39,10 @@ export class ApiClient {
     this.baseUrl = config.baseUrl.replace(/\/+$/, '');
     this.authToken = config.authToken;
     this.timeout = config.timeout ?? 15000;
-    this.fetchImpl = config.fetch ?? fetch;
+    // 默认实现包一层箭头函数，确保以「自由函数」方式调用全局 fetch（接收者为全局对象）。
+    // 若直接存 `?? fetch` 再以 this.fetchImpl(...) 方法形式调用，浏览器会把接收者设为
+    // ApiClient 实例，原生 window.fetch 会抛 TypeError: Illegal invocation（Node/jsdom 不校验，故仅浏览器复现）。
+    this.fetchImpl = config.fetch ?? ((input, init) => fetch(input, init));
   }
 
   setAuthToken(token: string): void {
