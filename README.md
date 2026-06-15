@@ -988,3 +988,34 @@ const block = await safeApiCall(() => client.get('/blocks/latest'));
 | `crypto.getRandomValues` | 所有现代浏览器 |
 
 如需在旧版浏览器中使用，可引入 `crypto` polyfill（如 `webcrypto-liner`）；Node.js 环境建议使用 >= 18。
+
+---
+
+## 发布（维护者）
+
+本包使用 `scripts/release.mjs` 一键发布。脚本会按顺序执行：**环境检查 → typecheck + 测试 → bump 版本 → 构建 → `npm publish --access public` → git commit + tag**。`git commit`/`tag` 只在 `npm publish` 成功后才执行；任何中途失败都会逐字节回滚 `package.json` / `package-lock.json` 的版本改动，保持工作区干净，不会留下「已提交版本却未发布」的中间态。
+
+前置条件：工作区干净、已 `npm login`，建议在 `main` / `dev` 分支上操作。
+
+```bash
+# 预演（强烈建议先跑一遍）：跑测试/构建并执行 npm publish --dry-run，不真正发布
+npm run release:dry
+
+# 正式发布
+npm run release                 # 补丁版本，如 2.0.1 → 2.0.2
+npm run release -- minor        # 次版本，2.0.1 → 2.1.0
+npm run release -- major        # 主版本
+npm run release -- 3.0.0        # 指定版本号
+
+# 预发布通道
+npm run release -- prerelease --preid beta --tag next
+
+# 启用 npm 双因素验证（2FA）
+npm run release -- --otp 123456
+```
+
+> 注意：`npm run release` 后面追加参数需要加 `--`（例如 `npm run release -- minor`），否则 npm 不会把参数透传给脚本。
+
+发布成功后会得到一个版本提交（消息为裸版本号，如 `2.0.2`）和对应标签（`v2.0.2`）。当前仓库未配置 git remote；如需推送，配置 remote 后执行 `git push --follow-tags`，或发布时加 `--push` 自动推送。
+
+完整选项见 `node scripts/release.mjs --help`。
