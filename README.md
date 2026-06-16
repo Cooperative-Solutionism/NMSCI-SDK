@@ -1082,7 +1082,7 @@ npm run test:pack:prepared
 
 ## 发布（维护者）
 
-本包使用 `scripts/release.mjs` 一键发布。脚本会按顺序执行：**环境检查 → 编码检查 → typecheck → 测试 → 类型级测试 → bump 版本 → 构建 → pack 冒烟测试 → `npm publish --access public` → git commit + tag**。`git commit`/`tag` 只在 `npm publish` 成功后才执行；任何中途失败都会逐字节回滚 `package.json` / `package-lock.json` 的版本改动，保持工作区干净，不会留下「已提交版本却未发布」的中间态。
+本包使用 `scripts/release.mjs` 一键发布。脚本会按顺序执行：**环境检查 → 编码检查 → typecheck → 测试 → 类型级测试 → bump 版本 → 构建 → pack 冒烟测试 → `npm publish --access public` → git commit + tag**。`git commit`/`tag` 只在 `npm publish` 成功后才执行；创建版本 commit 之前的失败会逐字节回滚 `package.json` / `package-lock.json` 的版本改动，commit/tag/publish 边界上的失败可能需要按 `git status` 和实际发布状态人工清理。
 
 > 当前 GitHub Actions 只做验证，不自动发布。若后续启用 npm Trusted Publishing / provenance，需要先在 npm 包侧配置 trusted publisher，再增加带 `id-token: write` 权限的发布 workflow，并使用满足 npm 要求的 Node/npm 版本。
 
