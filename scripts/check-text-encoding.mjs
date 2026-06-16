@@ -6,12 +6,23 @@ import { pathToFileURL } from 'node:url';
 
 const textFilePattern = /\.(?:md|ts|tsx|js|mjs|json|ya?ml)$/u;
 
+const commonUtf8MojibakeFragments = [
+  String.raw`\u9225[?\u2122\u0153]`,
+  String.raw`\u951B[?\u5c7b\u5c8c]`,
+  String.raw`\u9286[\u4e63\u20ac]`,
+  String.raw`\u9429[\uE000-\uF8FF]`,
+  String.raw`\u6D93[\u5a49\u7ec4\u54c4]`,
+  String.raw`\u00C3[\u0080-\u00BF]`,
+  String.raw`\u00C2[\u00A0-\u00BF]`,
+  String.raw`\u00E2\u0080[\u0080-\u009F]`,
+  String.raw`\u00E2\u20AC[\u0080-\u00BF\u2018-\u201D\u2020\u2021\u2022\u2026\u2030\u2039\u203A\u2122]`,
+];
+
 const suspiciousPatterns = [
   { label: 'Unicode replacement character U+FFFD', pattern: /\uFFFD/gu },
   {
     label: 'common UTF-8 mojibake fragment',
-    pattern:
-      /(?:\u9225[?\u2122\u0153]|\u951B[?\u5c7b\u5c8c]|\u9286[\u4e63\u20ac]|\u9429[\uE000-\uF8FF]|\u6D93[\u5a49\u7ec4\u54c4]|\u00C3[\u0080-\u00BF]|\u00C2[\u00A0-\u00BF]|\u00E2\u20AC[\u0080-\u00BF\u2018-\u201D\u2020\u2021\u2022\u2026\u2030\u2039\u203A\u2122])/gu,
+    pattern: new RegExp(`(?:${commonUtf8MojibakeFragments.join('|')})`, 'gu'),
   },
 ];
 
