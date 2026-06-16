@@ -8,7 +8,7 @@ import type {
 
 export type ConsumeChainResponse = ApiResponse<ConsumeChainResponseDTORaw>;
 export type ConsumeChainListResponse = ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>;
-export type ConsumeChainEdgeListResponse = ApiResponse<ConsumeChainEdgeRaw[]>;
+export type ConsumeChainEdgeListResponse = ApiResponse<SliceResponseDTO<ConsumeChainEdgeRaw>>;
 
 export interface ConsumeChainQuery extends PageQuery {
   isLoop?: boolean;
@@ -29,18 +29,28 @@ export interface ConsumeChainQueryFilters extends PageQuery {
   mountedTransactionId?: string;
 }
 
-/** 消费链边查询参数。target 必填（id 或 pubkey 二选一），不可混用。 */
-export interface ConsumeChainEdgeQuery {
-  targetId?: string;
-  targetPubkey?: string;
-  sourceId?: string;
-  sourcePubkey?: string;
+interface ConsumeChainEdgeBaseQuery extends PageQuery {
   currencyType?: number;
   /** 微秒时间戳。 */
   startTime?: number;
   /** 微秒时间戳。 */
   endTime?: number;
 }
+
+/** 消费链边查询参数。target 必填（id 或 pubkey 二选一），不可混用。 */
+export type ConsumeChainEdgeQuery =
+  | (ConsumeChainEdgeBaseQuery & {
+      targetId: string;
+      sourceId?: string;
+      targetPubkey?: never;
+      sourcePubkey?: never;
+    })
+  | (ConsumeChainEdgeBaseQuery & {
+      targetPubkey: string;
+      sourcePubkey?: string;
+      targetId?: never;
+      sourceId?: never;
+    });
 
 export async function getConsumeChainById(
   client: ApiClient,
@@ -105,13 +115,13 @@ export async function getConsumeChainByNode(
 }
 
 /**
- * 消费链边查询（流入某 target 的边集合，非分页）。target 必填。
+ * 消费链边查询（流入某 target 的边集合，返回分页 Slice）。target 必填。
  */
 export async function getConsumeChainEdges(
   client: ApiClient,
   params: ConsumeChainEdgeQuery,
-): Promise<ApiResponse<ConsumeChainEdgeRaw[]>> {
-  return client.get<ConsumeChainEdgeRaw[]>('/consume-chains/edges', { ...params });
+): Promise<ApiResponse<SliceResponseDTO<ConsumeChainEdgeRaw>>> {
+  return client.get<SliceResponseDTO<ConsumeChainEdgeRaw>>('/consume-chains/edges', { ...params });
 }
 
 function consumeChainQueryParams(

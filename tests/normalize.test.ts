@@ -92,7 +92,6 @@ describe('API DTO normalization', () => {
       centralSignature: signature,
       datFilepath: '/tmp/a.dat',
       sourceCodeZipFilepath: '/tmp/a.zip',
-      rawBytes: 'dd',
     };
     const rateRaw: ReturningFlowRateResponseDTORaw = {
       returningFlowRate: 0.5,

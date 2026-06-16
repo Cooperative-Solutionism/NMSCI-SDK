@@ -4,6 +4,10 @@ import type { CentralPubkeyEmpowerMsgRaw, PageQuery, SliceResponseDTO } from './
 export type CentralPubkeyEmpowerMsgResponse = ApiResponse<CentralPubkeyEmpowerMsgRaw>;
 export type CentralPubkeyEmpowerMsgListResponse = ApiResponse<SliceResponseDTO<CentralPubkeyEmpowerMsgRaw>>;
 
+export interface CentralPubkeyEmpowerMsgListQuery extends PageQuery {
+  flowNodePubkey?: string;
+}
+
 export async function sendCentralPubkeyEmpowerMsg(
   client: ApiClient,
   body: Uint8Array | number[],
@@ -18,6 +22,13 @@ export async function getCentralPubkeyEmpowerMsgById(
   return client.get<CentralPubkeyEmpowerMsgRaw>(`/central-pubkey-empowerments/${encodeURIComponent(id)}`);
 }
 
+export async function listCentralPubkeyEmpowerMsgs(
+  client: ApiClient,
+  query?: CentralPubkeyEmpowerMsgListQuery,
+): Promise<ApiResponse<SliceResponseDTO<CentralPubkeyEmpowerMsgRaw>>> {
+  return client.get<SliceResponseDTO<CentralPubkeyEmpowerMsgRaw>>('/central-pubkey-empowerments', query);
+}
+
 /**
  * 按流转节点公钥查询授权信息。后端集合根返回分页 Slice（不再是单对象）。
  */
@@ -26,8 +37,5 @@ export async function getCentralPubkeyEmpowerMsgByFlowNodePubkey(
   flowNodePubkey: string,
   pagination?: PageQuery,
 ): Promise<ApiResponse<SliceResponseDTO<CentralPubkeyEmpowerMsgRaw>>> {
-  return client.get<SliceResponseDTO<CentralPubkeyEmpowerMsgRaw>>('/central-pubkey-empowerments', {
-    flowNodePubkey,
-    ...pagination,
-  });
+  return listCentralPubkeyEmpowerMsgs(client, { flowNodePubkey, ...pagination });
 }
