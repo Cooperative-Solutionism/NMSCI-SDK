@@ -158,6 +158,8 @@ const sourceArchive = await client.download('/source-code/source_code_v1.zip');
 组合入口同样可以通过底层 client 访问：
 
 ```typescript
+import { NmsciSdk } from '@nmsci/sdk';
+
 const sdk = new NmsciSdk({ baseUrl: 'http://localhost:8080' });
 const datBytes = await sdk.client.download('/dat/blk00000001.dat');
 ```
@@ -1068,24 +1070,26 @@ npm run test:encoding
 npm run typecheck
 npm test
 npm run test:types
-npm run test:pack
 npm run build
+npm run test:pack:prepared
 ```
 
 `test:encoding` 会扫描已跟踪的文本文件，发现 Unicode replacement character 或常见 UTF-8 mojibake 标记时失败。不要仅凭 PowerShell 终端显示判断文件损坏；以 UTF-8 文件内容和该检查结果为准。
+
+`test:pack:prepared` 假定 `dist` 已由上一条 `npm run build` 生成，用于 CI / release 流程避免重复构建。单独在本地检查发布包时仍可运行 `npm run test:pack`，它会先构建再执行 pack 冒烟测试。
 
 ---
 
 ## 发布（维护者）
 
-本包使用 `scripts/release.mjs` 一键发布。脚本会按顺序执行：**环境检查 → typecheck + 测试 → bump 版本 → 构建 → `npm publish --access public` → git commit + tag**。`git commit`/`tag` 只在 `npm publish` 成功后才执行；任何中途失败都会逐字节回滚 `package.json` / `package-lock.json` 的版本改动，保持工作区干净，不会留下「已提交版本却未发布」的中间态。
+本包使用 `scripts/release.mjs` 一键发布。脚本会按顺序执行：**环境检查 → 编码检查 → typecheck → 测试 → 类型级测试 → bump 版本 → 构建 → pack 冒烟测试 → `npm publish --access public` → git commit + tag**。`git commit`/`tag` 只在 `npm publish` 成功后才执行；任何中途失败都会逐字节回滚 `package.json` / `package-lock.json` 的版本改动，保持工作区干净，不会留下「已提交版本却未发布」的中间态。
 
 > 当前 GitHub Actions 只做验证，不自动发布。若后续启用 npm Trusted Publishing / provenance，需要先在 npm 包侧配置 trusted publisher，再增加带 `id-token: write` 权限的发布 workflow，并使用满足 npm 要求的 Node/npm 版本。
 
 前置条件：工作区干净、已 `npm login`，建议在 `main` / `dev` 分支上操作。
 
 ```bash
-# 预演（强烈建议先跑一遍）：跑测试/构建并执行 npm publish --dry-run，不真正发布
+# 预演（强烈建议先跑一遍）：跑完整门禁、构建、pack 冒烟，并执行 npm publish --dry-run，不真正发布
 npm run release:dry
 
 # 正式发布
