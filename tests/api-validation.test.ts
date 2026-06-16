@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ApiClient,
+  getConsumeChainById,
+  getConsumeChainByEnd,
+  getConsumeChainByMountedTransaction,
+  getConsumeChainByNode,
+  getConsumeChainByStart,
+  getConsumeChainEdges,
+  getReturningFlowRateById,
+  getReturningFlowRateByPubkey,
+  type PageQuery,
+  queryConsumeChains,
+} from '../src';
+import {
   validateCompressedPubkey,
   validateHexString,
   validatePageQuery,
@@ -91,5 +104,171 @@ describe('API query validation primitives', () => {
       'edges.endTime must be an integer >= 0',
     );
     expect(() => validateTimeRange(10, 9, 'edges')).toThrow('edges.endTime must be >= startTime');
+  });
+});
+
+const client = new ApiClient({
+  baseUrl: 'https://example.test',
+  fetch: async () =>
+    new Response(JSON.stringify({ code: 200, message: 'ok', data: {} }), { status: 200 }),
+});
+const uuidA = '550e8400-e29b-41d4-a716-446655440000';
+const uuidB = '550e8400-e29b-41d4-a716-446655440001';
+const pubkeyA = `02${'11'.repeat(32)}`;
+const pubkeyB = `03${'22'.repeat(32)}`;
+
+function createCountingClient(): { client: ApiClient; fetchCount: () => number; requested: () => string[] } {
+  let count = 0;
+  const urls: string[] = [];
+  return {
+    client: new ApiClient({
+      baseUrl: 'https://example.test',
+      fetch: async (url) => {
+        count += 1;
+        urls.push(url);
+        return new Response(JSON.stringify({ code: 200, message: 'ok', data: {} }), { status: 200 });
+      },
+    }),
+    fetchCount: () => count,
+    requested: () => urls,
+  };
+}
+
+describe('consume-chain query validation', () => {
+  it('rejects invalid consume-chain UUIDs', async () => {
+    await expect(getConsumeChainById(client, 'not-a-uuid')).rejects.toThrow(
+      /id must be a UUID string/,
+    );
+    await expect(getConsumeChainByMountedTransaction(client, 'not-a-uuid')).rejects.toThrow(
+      /mountedTransactionId must be a UUID string/,
+    );
+    await expect(getConsumeChainByStart(client, 'not-a-uuid')).rejects.toThrow(
+      /startId must be a UUID string/,
+    );
+  });
+
+  it('rejects id and pubkey mode mixing in consume-chain root queries', async () => {
+    await expect(queryConsumeChains(client, { startId: uuidA, endPubkey: pubkeyA })).rejects.toThrow(
+      /consume-chains cannot mix id and pubkey query parameters/,
+    );
+    await expect(queryConsumeChains(client, { mountedTransactionId: uuidA, startId: uuidB })).rejects.toThrow(
+      /mountedTransactionId cannot be combined with node filters/,
+    );
+  });
+
+  it('rejects consume-chain root selectors passed through pagination without calling fetch', async () => {
+    const counted = createCountingClient();
+
+    await expect(
+      queryConsumeChains(counted.client, { mountedTransactionId: uuidA }, { startId: uuidB } as PageQuery),
+    ).rejects.toThrow(/mountedTransactionId cannot be combined with node filters/);
+
+    expect(counted.fetchCount()).toBe(0);
+  });
+
+  it('rejects selector filters in consume-chain convenience query objects before calling fetch', async () => {
+    const counted = createCountingClient();
+
+    await expect(
+      getConsumeChainByStart(counted.client, uuidA, { endId: uuidB } as never),
+    ).rejects.toThrow(/consume-chains convenience query cannot include selector filters/);
+    await expect(
+      getConsumeChainByEnd(counted.client, uuidA, { nodeId: uuidB } as never),
+    ).rejects.toThrow(/consume-chains convenience query cannot include selector filters/);
+    await expect(
+      getConsumeChainByNode(counted.client, uuidA, { startPubkey: pubkeyA } as never),
+    ).rejects.toThrow(/consume-chains convenience query cannot include selector filters/);
+    await expect(
+      getConsumeChainByStart(counted.client, uuidA, { startId: 'not-a-uuid' } as never),
+    ).rejects.toThrow(/consume-chains convenience query cannot include selector filters/);
+
+    expect(counted.fetchCount()).toBe(0);
+  });
+
+  it('rejects missing or mixed consume-chain edge target selectors', async () => {
+    await expect(getConsumeChainEdges(client, {} as never)).rejects.toThrow(
+      /consume-chains\/edges requires targetId or targetPubkey/,
+    );
+    await expect(getConsumeChainEdges(client, { sourceId: uuidA } as never)).rejects.toThrow(
+      /consume-chains\/edges requires targetId or targetPubkey/,
+    );
+    await expect(getConsumeChainEdges(client, { sourcePubkey: pubkeyA } as never)).rejects.toThrow(
+      /consume-chains\/edges requires targetId or targetPubkey/,
+    );
+    await expect(getConsumeChainEdges(client, { targetId: uuidA, targetPubkey: pubkeyA } as never)).rejects.toThrow(
+      /consume-chains\/edges cannot mix id and pubkey query parameters/,
+    );
+    await expect(getConsumeChainEdges(client, { targetId: uuidA, sourcePubkey: pubkeyA } as never)).rejects.toThrow(
+      /consume-chains\/edges cannot mix id and pubkey query parameters/,
+    );
+  });
+
+  it('rejects malformed consume-chain edge selectors and pagination', async () => {
+    await expect(getConsumeChainEdges(client, { targetId: 'not-a-uuid' })).rejects.toThrow(
+      /targetId must be a UUID string/,
+    );
+    await expect(getConsumeChainEdges(client, { targetPubkey: 'bad-pubkey' })).rejects.toThrow(
+      /targetPubkey must be a 33-byte compressed public key hex string/,
+    );
+    await expect(getConsumeChainEdges(client, { targetId: uuidA, page: -1 })).rejects.toThrow(
+      /consume-chains\/edges.page must be an integer >= 0/,
+    );
+    await expect(getConsumeChainEdges(client, { targetId: uuidA, startTime: 10, endTime: 9 })).rejects.toThrow(
+      /consume-chains\/edges.endTime must be >= startTime/,
+    );
+  });
+});
+
+describe('returning-flow-rate query validation', () => {
+  it('rejects invalid returning-flow-rate UUIDs and pubkeys', async () => {
+    await expect(getReturningFlowRateById(client, { targetId: 'not-a-uuid' })).rejects.toThrow(
+      /targetId must be a UUID string/,
+    );
+    await expect(getReturningFlowRateByPubkey(client, { targetPubkey: 'bad-pubkey' })).rejects.toThrow(
+      /targetPubkey must be a 33-byte compressed public key hex string/,
+    );
+  });
+
+  it('rejects returning-flow-rate source-only requests without calling fetch', async () => {
+    const counted = createCountingClient();
+
+    await expect(getReturningFlowRateById(counted.client, { sourceId: uuidA } as never)).rejects.toThrow(
+      /targetId must be a UUID string/,
+    );
+    await expect(getReturningFlowRateByPubkey(counted.client, { sourcePubkey: pubkeyA } as never)).rejects.toThrow(
+      /targetPubkey must be a 33-byte compressed public key hex string/,
+    );
+
+    expect(counted.fetchCount()).toBe(0);
+  });
+
+  it('rejects returning-flow-rate id and pubkey mixing from JavaScript callers', async () => {
+    await expect(getReturningFlowRateById(client, { targetId: uuidA, targetPubkey: pubkeyA } as never)).rejects.toThrow(
+      /returning-flow-rates cannot mix id and pubkey query parameters/,
+    );
+    await expect(getReturningFlowRateById(client, { targetPubkey: pubkeyA } as never)).rejects.toThrow(
+      /returning-flow-rates cannot mix id and pubkey query parameters/,
+    );
+    await expect(
+      getReturningFlowRateByPubkey(client, { targetPubkey: pubkeyA, sourceId: uuidA } as never),
+    ).rejects.toThrow(/returning-flow-rates cannot mix id and pubkey query parameters/);
+    await expect(getReturningFlowRateByPubkey(client, { targetId: uuidA } as never)).rejects.toThrow(
+      /returning-flow-rates cannot mix id and pubkey query parameters/,
+    );
+  });
+
+  it('rejects invalid returning-flow-rate time ranges', async () => {
+    await expect(getReturningFlowRateById(client, { targetId: uuidA, startTime: 10, endTime: 9 })).rejects.toThrow(
+      /returning-flow-rates.endTime must be >= startTime/,
+    );
+  });
+
+  it('accepts valid returning-flow-rate id and pubkey requests', async () => {
+    await expect(getReturningFlowRateById(client, { targetId: uuidA, sourceId: uuidB })).resolves.toMatchObject({
+      code: 200,
+    });
+    await expect(
+      getReturningFlowRateByPubkey(client, { targetPubkey: pubkeyA, sourcePubkey: pubkeyB }),
+    ).resolves.toMatchObject({ code: 200 });
   });
 });

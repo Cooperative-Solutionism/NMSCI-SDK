@@ -4,6 +4,8 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 const HEX_PATTERN = /^(?:[0-9a-f]{2})*$/i;
 const COMPRESSED_PUBKEY_PATTERN = /^0[23][0-9a-f]{64}$/i;
 
+export type SelectorMode = 'id' | 'pubkey' | 'none';
+
 export function validatePageQuery(query: PageQuery | undefined, context: string): void {
   if (query?.page !== undefined && (!Number.isInteger(query.page) || query.page < 0)) {
     throw new Error(`${context}.page must be an integer >= 0`);
@@ -56,4 +58,45 @@ export function validateTimeRange(
   if (startTime !== undefined && endTime !== undefined && endTime < startTime) {
     throw new Error(`${context}.endTime must be >= startTime`);
   }
+}
+
+export function validateNoIdPubkeyMix(
+  params: Record<string, unknown> | undefined,
+  idKeys: readonly string[],
+  pubkeyKeys: readonly string[],
+  context: string,
+): SelectorMode {
+  if (!params) {
+    return 'none';
+  }
+
+  const hasId = idKeys.some(key => params[key] !== undefined);
+  const hasPubkey = pubkeyKeys.some(key => params[key] !== undefined);
+  if (hasId && hasPubkey) {
+    throw new Error(`${context} cannot mix id and pubkey query parameters`);
+  }
+
+  if (hasId) {
+    return 'id';
+  }
+  if (hasPubkey) {
+    return 'pubkey';
+  }
+  return 'none';
+}
+
+export function validateRequiredTargetMode(
+  params: Record<string, unknown>,
+  context: string,
+): SelectorMode {
+  const mode = validateNoIdPubkeyMix(
+    params,
+    ['targetId', 'sourceId'],
+    ['targetPubkey', 'sourcePubkey'],
+    context,
+  );
+  if (params.targetId === undefined && params.targetPubkey === undefined) {
+    throw new Error(`${context} requires targetId or targetPubkey`);
+  }
+  return mode;
 }

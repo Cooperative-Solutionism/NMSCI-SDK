@@ -23,6 +23,11 @@ import type {
   SliceResponseDTO,
 } from '../src';
 
+const uuidA = '550e8400-e29b-41d4-a716-446655440000';
+const uuidB = '550e8400-e29b-41d4-a716-446655440001';
+const pubkeyA = `02${'11'.repeat(32)}`;
+const pubkeyB = `03${'22'.repeat(32)}`;
+
 describe('current backend API contracts', () => {
   it('passes page and size to slice-backed query endpoints', async () => {
     const requested: string[] = [];
@@ -43,12 +48,12 @@ describe('current backend API contracts', () => {
 
     await getTransactionRecordMsgByFlowNodePubkey(client, 'flow', { page: 2, size: 10 });
     await getTransactionMountMsgByBothPubkeys(client, 'consume', 'flow', { page: 1, size: 25 });
-    await getConsumeChainByStart(client, 'chain-start', { isLoop: false, page: 3, size: 5 });
+    await getConsumeChainByStart(client, uuidA, { isLoop: false, page: 3, size: 5 });
 
     expect(requested).toEqual([
       'https://example.test/transaction-records?flowNodePubkey=flow&page=2&size=10',
       'https://example.test/transaction-mounts?consumeNodePubkey=consume&flowNodePubkey=flow&page=1&size=25',
-      'https://example.test/consume-chains?startId=chain-start&isLoop=false&page=3&size=5',
+      `https://example.test/consume-chains?startId=${uuidA}&isLoop=false&page=3&size=5`,
     ]);
   });
 
@@ -136,15 +141,15 @@ describe('current backend API contracts', () => {
     });
 
     const response = await getConsumeChainEdges(client, {
-      targetId: 'target-id',
-      sourceId: 'source-id',
+      targetId: uuidA,
+      sourceId: uuidB,
       currencyType: 1,
       page: 1,
       size: 25,
     });
 
     expect(requested).toEqual([
-      'https://example.test/consume-chains/edges?targetId=target-id&sourceId=source-id&currencyType=1&page=1&size=25',
+      `https://example.test/consume-chains/edges?targetId=${uuidA}&sourceId=${uuidB}&currencyType=1&page=1&size=25`,
     ]);
     expect(response.data.content[0]?.id).toBe('edge-id');
     expect(response.data.hasPrevious).toBe(true);
@@ -168,8 +173,8 @@ describe('current backend API contracts', () => {
     });
 
     await getConsumeChainEdges(client, {
-      targetPubkey: 'target-pubkey',
-      sourcePubkey: 'source-pubkey',
+      targetPubkey: pubkeyA,
+      sourcePubkey: pubkeyB,
       currencyType: 1,
       startTime: 1718352000000000,
       endTime: 1718352999999999,
@@ -178,7 +183,7 @@ describe('current backend API contracts', () => {
     });
 
     expect(requested).toEqual([
-      'https://example.test/consume-chains/edges?targetPubkey=target-pubkey&sourcePubkey=source-pubkey&currencyType=1&startTime=1718352000000000&endTime=1718352999999999&page=0&size=50',
+      `https://example.test/consume-chains/edges?targetPubkey=${pubkeyA}&sourcePubkey=${pubkeyB}&currencyType=1&startTime=1718352000000000&endTime=1718352999999999&page=0&size=50`,
     ]);
   });
 
