@@ -8,11 +8,6 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const fallbackNpmCli = resolve(root, 'node_modules/npm/bin/npm-cli.js');
-const npmCli = process.env.npm_execpath || (existsSync(fallbackNpmCli) ? fallbackNpmCli : undefined);
-
-if (!npmCli) {
-  throw new Error('Unable to locate npm CLI. Run this script through npm or install npm locally.');
-}
 
 export function parseSmokePackArgs(argv = process.argv.slice(2)) {
   const options = { skipBuild: false };
@@ -43,8 +38,18 @@ const capture = (cmd, args, options = {}) =>
     ...options,
   });
 
-const runNpm = (args, options = {}) => run(process.execPath, [npmCli, ...args], options);
-const captureNpm = (args, options = {}) => capture(process.execPath, [npmCli, ...args], options);
+const resolveNpmCli = () => {
+  const npmCli = process.env.npm_execpath || (existsSync(fallbackNpmCli) ? fallbackNpmCli : undefined);
+
+  if (!npmCli) {
+    throw new Error('Unable to locate npm CLI. Run this script through npm or install npm locally.');
+  }
+
+  return npmCli;
+};
+
+const runNpm = (args, options = {}) => run(process.execPath, [resolveNpmCli(), ...args], options);
+const captureNpm = (args, options = {}) => capture(process.execPath, [resolveNpmCli(), ...args], options);
 
 export function runSmokePack(options = parseSmokePackArgs()) {
   const tempDir = mkdtempSync(join(tmpdir(), 'nmsci-sdk-pack-'));
@@ -94,6 +99,6 @@ for (const entry of entries) {
   }
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   runSmokePack();
 }
