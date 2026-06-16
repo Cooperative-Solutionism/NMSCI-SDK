@@ -249,7 +249,7 @@ describe('text encoding audit', () => {
     const findings = findSuspiciousEncodingMarkers([
       {
         file: 'README.md',
-        text: 'first line\\nabc�def',
+        text: 'first line\\nabc\uFFFDdef',
       },
     ]);
 
@@ -267,7 +267,7 @@ describe('text encoding audit', () => {
     const findings = findSuspiciousEncodingMarkers([
       {
         file: 'package.json',
-        text: 'SDK 鈥? TypeScript',
+        text: 'SDK \u9225? TypeScript',
       },
     ]);
 
@@ -310,7 +310,7 @@ const suspiciousPatterns = [
   { label: 'Unicode replacement character U+FFFD', pattern: /\uFFFD/gu },
   {
     label: 'common UTF-8 mojibake fragment',
-    pattern: /(?:鈥[?\u2122\u0153]|锛[?\u5c7b\u5c8c]?|銆[\u4e63\u20ac]|鐩[\uE000-\uF8FF]|涓[\u5a49\u7ec4\u54c4])/gu,
+    pattern: /(?:\u9225[?\u2122\u0153]|\u951B[?\u5c7b\u5c8c]?|\u9286[\u4e63\u20ac]|\u9429[\uE000-\uF8FF]|\u6D93[\u5a49\u7ec4\u54c4])/gu,
   },
 ];
 

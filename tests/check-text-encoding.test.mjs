@@ -50,12 +50,11 @@ describe('text encoding audit', () => {
     ]);
   });
 
-  it('ignores documented bad encoding examples in release-plan code fences', () => {
+  it('does not report a lone mojibake marker without context', () => {
     const findings = findSuspiciousEncodingMarkers([
       {
-        file: 'docs/superpowers/plans/example.md',
-        text:
-          'before\n```js\nconst replacement = "abc\uFFFDdef";\nconst mojibake = "SDK \u9225? TypeScript";\n```\nafter',
+        file: 'README.md',
+        text: 'SDK \u951B TypeScript',
       },
     ]);
 

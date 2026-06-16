@@ -10,7 +10,7 @@ const suspiciousPatterns = [
   { label: 'Unicode replacement character U+FFFD', pattern: /\uFFFD/gu },
   {
     label: 'common UTF-8 mojibake fragment',
-    pattern: /(?:\u9225[?\u2122\u0153]|\u951B[?\u5c7b\u5c8c]?|\u9286[\u4e63\u20ac]|\u9429[\uE000-\uF8FF]|\u6D93[\u5a49\u7ec4\u54c4])/gu,
+    pattern: /(?:\u9225[?\u2122\u0153]|\u951B[?\u5c7b\u5c8c]|\u9286[\u4e63\u20ac]|\u9429[\uE000-\uF8FF]|\u6D93[\u5a49\u7ec4\u54c4])/gu,
   },
 ];
 
@@ -30,73 +30,15 @@ function getLineColumn(text, index) {
   };
 }
 
-function getMarkdownFencedCodeRanges(text) {
-  const ranges = [];
-  const linePattern = /.*(?:\r?\n|$)/gu;
-  let fenceStart = 0;
-  let fenceMarker = '';
-  let fenceLength = 0;
-  let inFence = false;
-
-  let match;
-  while ((match = linePattern.exec(text)) !== null) {
-    const line = match[0];
-    if (line === '') {
-      break;
-    }
-
-    const fenceMatch = /^[ \t]{0,3}(`{3,}|~{3,})/u.exec(line);
-    if (fenceMatch) {
-      const marker = fenceMatch[1][0];
-      const length = fenceMatch[1].length;
-
-      if (!inFence) {
-        inFence = true;
-        fenceStart = match.index;
-        fenceMarker = marker;
-        fenceLength = length;
-      } else if (marker === fenceMarker && length >= fenceLength) {
-        ranges.push({ start: fenceStart, end: match.index + line.length });
-        inFence = false;
-      }
-    }
-  }
-
-  if (inFence) {
-    ranges.push({ start: fenceStart, end: text.length });
-  }
-
-  return ranges;
-}
-
-function getIgnoredRanges(file, text) {
-  const normalizedFile = file.replaceAll('\\', '/');
-  if (!/^docs\/superpowers\/plans\/.+\.md$/iu.test(normalizedFile)) {
-    return [];
-  }
-
-  return getMarkdownFencedCodeRanges(text);
-}
-
-function isIgnoredIndex(ranges, index) {
-  return ranges.some(range => index >= range.start && index < range.end);
-}
-
 export function findSuspiciousEncodingMarkers(files) {
   const findings = [];
 
   for (const { file, text } of files) {
-    const ignoredRanges = getIgnoredRanges(file, text);
-
     for (const { label, pattern } of suspiciousPatterns) {
       pattern.lastIndex = 0;
 
       let match;
       while ((match = pattern.exec(text)) !== null) {
-        if (isIgnoredIndex(ignoredRanges, match.index)) {
-          continue;
-        }
-
         const location = getLineColumn(text, match.index);
         findings.push({
           file,
