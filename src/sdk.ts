@@ -45,6 +45,22 @@ import {
   getMessageTypes,
 } from './api/metadata.api';
 import {
+  normalizeApiResponse,
+  normalizeApiResponseSlice,
+  normalizeBlockInfo,
+  normalizeCentralPubkeyEmpowerMsg,
+  normalizeCentralPubkeyLockedMsg,
+  normalizeConsumeChainEdge,
+  normalizeConsumeChainResponseDTO,
+  normalizeFlowNodeLockedMsg,
+  normalizeLockedMessageResponseDTO,
+  normalizeStorageStatus,
+  normalizeSystemParams,
+  normalizeSystemStatus,
+  normalizeTransactionMountMsg,
+  normalizeTransactionRecordMsg,
+} from './api/normalize';
+import {
   getReturningFlowRateById,
   getReturningFlowRateByPubkey,
 } from './api/returning-flow-rate.api';
@@ -206,6 +222,182 @@ export class NmsciSdk {
     getCurrencyTypes: () => getCurrencyTypes(this.client),
     getBlockFormat: () => getBlockFormat(this.client),
     getDifficulty: () => getDifficulty(this.client),
+  };
+
+  readonly normalized = {
+    centralPubkeyEmpower: {
+      getById: async (id: string) =>
+        normalizeApiResponse(await getCentralPubkeyEmpowerMsgById(this.client, id), normalizeCentralPubkeyEmpowerMsg),
+      list: async (query?: Parameters<typeof listCentralPubkeyEmpowerMsgs>[1]) =>
+        normalizeApiResponseSlice(
+          await listCentralPubkeyEmpowerMsgs(this.client, query),
+          normalizeCentralPubkeyEmpowerMsg,
+        ),
+      getByFlowNodePubkey: async (
+        flowNodePubkey: string,
+        pagination?: Parameters<typeof getCentralPubkeyEmpowerMsgByFlowNodePubkey>[2],
+      ) =>
+        normalizeApiResponseSlice(
+          await getCentralPubkeyEmpowerMsgByFlowNodePubkey(this.client, flowNodePubkey, pagination),
+          normalizeCentralPubkeyEmpowerMsg,
+        ),
+    },
+    centralPubkeyLocked: {
+      getById: async (id: string) =>
+        normalizeApiResponse(await getCentralPubkeyLockedMsgById(this.client, id), normalizeCentralPubkeyLockedMsg),
+      list: async (pagination?: Parameters<typeof listCentralPubkeyLockedMsgs>[1]) =>
+        normalizeApiResponseSlice(
+          await listCentralPubkeyLockedMsgs(this.client, pagination),
+          normalizeCentralPubkeyLockedMsg,
+        ),
+      getByCentralPubkey: async (centralPubkey: string) =>
+        normalizeApiResponse(
+          await getCentralPubkeyLockedMsgByCentralPubkey(this.client, centralPubkey),
+          locked => normalizeLockedMessageResponseDTO(locked, normalizeCentralPubkeyLockedMsg),
+        ),
+    },
+    flowNodeLocked: {
+      getById: async (id: string) =>
+        normalizeApiResponse(await getFlowNodeLockedMsgById(this.client, id), normalizeFlowNodeLockedMsg),
+      list: async (pagination?: Parameters<typeof listFlowNodeLockedMsgs>[1]) =>
+        normalizeApiResponseSlice(await listFlowNodeLockedMsgs(this.client, pagination), normalizeFlowNodeLockedMsg),
+      getByFlowNodePubkey: async (flowNodePubkey: string) =>
+        normalizeApiResponse(
+          await getFlowNodeLockedMsgByFlowNodePubkey(this.client, flowNodePubkey),
+          locked => normalizeLockedMessageResponseDTO(locked, normalizeFlowNodeLockedMsg),
+        ),
+    },
+    transactionRecord: {
+      getById: async (id: string) =>
+        normalizeApiResponse(await getTransactionRecordMsgById(this.client, id), normalizeTransactionRecordMsg),
+      search: async (
+        filters?: Parameters<typeof searchTransactionRecordMsgs>[1],
+        pagination?: Parameters<typeof searchTransactionRecordMsgs>[2],
+      ) =>
+        normalizeApiResponseSlice(
+          await searchTransactionRecordMsgs(this.client, filters, pagination),
+          normalizeTransactionRecordMsg,
+        ),
+      getByConsumeNodePubkey: async (
+        consumeNodePubkey: string,
+        pagination?: Parameters<typeof getTransactionRecordMsgByConsumeNodePubkey>[2],
+      ) =>
+        normalizeApiResponseSlice(
+          await getTransactionRecordMsgByConsumeNodePubkey(this.client, consumeNodePubkey, pagination),
+          normalizeTransactionRecordMsg,
+        ),
+      getByFlowNodePubkey: async (
+        flowNodePubkey: string,
+        pagination?: Parameters<typeof getTransactionRecordMsgByFlowNodePubkey>[2],
+      ) =>
+        normalizeApiResponseSlice(
+          await getTransactionRecordMsgByFlowNodePubkey(this.client, flowNodePubkey, pagination),
+          normalizeTransactionRecordMsg,
+        ),
+      getByBothPubkeys: async (
+        consumeNodePubkey: string,
+        flowNodePubkey: string,
+        pagination?: Parameters<typeof getTransactionRecordMsgByBothPubkeys>[3],
+      ) =>
+        normalizeApiResponseSlice(
+          await getTransactionRecordMsgByBothPubkeys(this.client, consumeNodePubkey, flowNodePubkey, pagination),
+          normalizeTransactionRecordMsg,
+        ),
+    },
+    transactionMount: {
+      getById: async (id: string) =>
+        normalizeApiResponse(await getTransactionMountMsgById(this.client, id), normalizeTransactionMountMsg),
+      search: async (
+        filters?: Parameters<typeof searchTransactionMountMsgs>[1],
+        pagination?: Parameters<typeof searchTransactionMountMsgs>[2],
+      ) =>
+        normalizeApiResponseSlice(
+          await searchTransactionMountMsgs(this.client, filters, pagination),
+          normalizeTransactionMountMsg,
+        ),
+      getByMountedTransactionRecordId: async (
+        id: string,
+        pagination?: Parameters<typeof getTransactionMountMsgByMountedTransactionRecordId>[2],
+      ) =>
+        normalizeApiResponseSlice(
+          await getTransactionMountMsgByMountedTransactionRecordId(this.client, id, pagination),
+          normalizeTransactionMountMsg,
+        ),
+      getByConsumeNodePubkey: async (
+        consumeNodePubkey: string,
+        pagination?: Parameters<typeof getTransactionMountMsgByConsumeNodePubkey>[2],
+      ) =>
+        normalizeApiResponseSlice(
+          await getTransactionMountMsgByConsumeNodePubkey(this.client, consumeNodePubkey, pagination),
+          normalizeTransactionMountMsg,
+        ),
+      getByFlowNodePubkey: async (
+        flowNodePubkey: string,
+        pagination?: Parameters<typeof getTransactionMountMsgByFlowNodePubkey>[2],
+      ) =>
+        normalizeApiResponseSlice(
+          await getTransactionMountMsgByFlowNodePubkey(this.client, flowNodePubkey, pagination),
+          normalizeTransactionMountMsg,
+        ),
+      getByBothPubkeys: async (
+        consumeNodePubkey: string,
+        flowNodePubkey: string,
+        pagination?: Parameters<typeof getTransactionMountMsgByBothPubkeys>[3],
+      ) =>
+        normalizeApiResponseSlice(
+          await getTransactionMountMsgByBothPubkeys(this.client, consumeNodePubkey, flowNodePubkey, pagination),
+          normalizeTransactionMountMsg,
+        ),
+    },
+    block: {
+      getLast: async () => normalizeApiResponse(await getLastBlock(this.client), normalizeBlockInfo),
+      getByHeight: async (height: number) =>
+        normalizeApiResponse(await getBlockByHeight(this.client, height), normalizeBlockInfo),
+      getByHash: async (hash: string) =>
+        normalizeApiResponse(await getBlockByHash(this.client, hash), normalizeBlockInfo),
+    },
+    consumeChain: {
+      getById: async (id: string) =>
+        normalizeApiResponse(await getConsumeChainById(this.client, id), normalizeConsumeChainResponseDTO),
+      query: async (
+        filters?: Parameters<typeof queryConsumeChains>[1],
+        pagination?: Parameters<typeof queryConsumeChains>[2],
+      ) =>
+        normalizeApiResponseSlice(
+          await queryConsumeChains(this.client, filters, pagination),
+          normalizeConsumeChainResponseDTO,
+        ),
+      getByMountedTransaction: async (
+        mountedTransactionId: string,
+        pagination?: Parameters<typeof getConsumeChainByMountedTransaction>[2],
+      ) =>
+        normalizeApiResponseSlice(
+          await getConsumeChainByMountedTransaction(this.client, mountedTransactionId, pagination),
+          normalizeConsumeChainResponseDTO,
+        ),
+      getByStart: async (startId: string, query?: Parameters<typeof getConsumeChainByStart>[2]) =>
+        normalizeApiResponseSlice(
+          await getConsumeChainByStart(this.client, startId, query),
+          normalizeConsumeChainResponseDTO,
+        ),
+      getByEnd: async (endId: string, query?: Parameters<typeof getConsumeChainByEnd>[2]) =>
+        normalizeApiResponseSlice(
+          await getConsumeChainByEnd(this.client, endId, query),
+          normalizeConsumeChainResponseDTO,
+        ),
+      getByNode: async (nodeId: string, query?: Parameters<typeof getConsumeChainByNode>[2]) =>
+        normalizeApiResponseSlice(
+          await getConsumeChainByNode(this.client, nodeId, query),
+          normalizeConsumeChainResponseDTO,
+        ),
+      getEdges: async (params: Parameters<typeof getConsumeChainEdges>[1]) =>
+        normalizeApiResponseSlice(await getConsumeChainEdges(this.client, params), normalizeConsumeChainEdge),
+    },
+    system: {
+      getParams: async () => normalizeApiResponse(await getSystemParams(this.client), normalizeSystemParams),
+      getStatus: async () => normalizeApiResponse(await getSystemStatus(this.client), normalizeSystemStatus),
+      getStorage: async () => normalizeApiResponse(await getSystemStorage(this.client), normalizeStorageStatus),
+    },
   };
 
   constructor(configOrClient: SdkConfig | ApiClient) {

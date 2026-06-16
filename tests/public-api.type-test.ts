@@ -6,11 +6,17 @@ import {
   getReturningFlowRateById,
   getReturningFlowRateByPubkey,
   type ApiResponse,
+  type BlockInfo,
+  type BlockInfoRaw,
+  type ConsumeChainEdge,
   type ConsumeChainEdgeListResponse,
   type ConsumeChainEdgeQuery,
   type ConsumeChainEdgeRaw,
+  type FlowNodeLockedMsg,
+  type LockedMessageResponseDTO,
   type ReturningFlowRateResponse,
   type SliceResponseDTO,
+  type TransactionRecordMsg,
 } from '../src';
 
 declare const client: ApiClient;
@@ -50,6 +56,18 @@ void getConsumeChainEdges(client, consumeEdgeById);
 void getConsumeChainEdges(client, consumeEdgeByPubkey);
 void sdk.consumeChain.getEdges(consumeEdgeById);
 void sdk.consumeChain.getEdges(consumeEdgeByPubkey);
+
+expectTypeOf<ReturnType<typeof sdk.block.getLast>>().toEqualTypeOf<Promise<ApiResponse<BlockInfoRaw>>>();
+expectTypeOf<ReturnType<typeof sdk.normalized.block.getLast>>().toEqualTypeOf<Promise<ApiResponse<BlockInfo>>>();
+expectTypeOf<ReturnType<typeof sdk.normalized.transactionRecord.search>>().toEqualTypeOf<
+  Promise<ApiResponse<SliceResponseDTO<TransactionRecordMsg>>>
+>();
+expectTypeOf<ReturnType<typeof sdk.normalized.consumeChain.getEdges>>().toEqualTypeOf<
+  Promise<ApiResponse<SliceResponseDTO<ConsumeChainEdge>>>
+>();
+expectTypeOf<ReturnType<typeof sdk.normalized.flowNodeLocked.getByFlowNodePubkey>>().toEqualTypeOf<
+  Promise<ApiResponse<LockedMessageResponseDTO<FlowNodeLockedMsg>>>
+>();
 
 // @ts-expect-error targetId or targetPubkey is required.
 void getConsumeChainEdges(client, {});
