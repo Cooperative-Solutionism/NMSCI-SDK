@@ -3,12 +3,12 @@
 /**
  * @nmsci/sdk 自动发布脚本 / Automated release script
  *
- * 流程：环境检查 → typecheck + 测试 → bump 版本 → 构建 → npm publish
- *      → git commit + tag（仅在发布成功后）。
+ * 流程：环境检查 → 编码检查 → typecheck → 测试 → 类型级测试 → bump 版本
+ *      → 构建 → pack 冒烟测试 → `npm publish --access public` → git commit + tag。
  *
- * 设计原则：git commit / tag 只在 `npm publish` 成功之后执行；任何中途失败
- * 都会回滚 package.json / package-lock.json 的版本改动，保持工作区干净，
- * 不会留下「已提交版本却未发布」的中间态。
+ * 设计原则：git commit / tag 只在 `npm publish` 成功之后执行；创建版本 commit
+ * 之前的失败会回滚 package.json / package-lock.json 的版本改动。commit/tag/publish
+ * 边界失败可能需要按 `git status` 和实际发布状态人工清理。
  *
  * 用法见 `node scripts/release.mjs --help`。
  */
