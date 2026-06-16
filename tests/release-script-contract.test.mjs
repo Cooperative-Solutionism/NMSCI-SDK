@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const releaseScript = readFileSync('scripts/release.mjs', 'utf8');
 const ciWorkflow = readFileSync('.github/workflows/ci.yml', 'utf8');
+const normalizedCiWorkflow = ciWorkflow.replace(/\r\n/g, '\n');
 
 function expectInOrder(source, snippets) {
   let previous = -1;
@@ -40,6 +41,8 @@ describe('release and CI command contracts', () => {
   });
 
   it('keeps CI validation-only and avoids duplicate build work', () => {
+    expect(normalizedCiWorkflow).toContain("on:\n  push:\n    branches:\n      - '**'\n  pull_request:");
+    expect(normalizedCiWorkflow).not.toMatch(/^\s*tags(?:-ignore)?:/m);
     expect(ciWorkflow).not.toContain('id-token: write');
     expect(ciWorkflow).not.toContain('npm publish');
     expectInOrder(ciWorkflow, [
