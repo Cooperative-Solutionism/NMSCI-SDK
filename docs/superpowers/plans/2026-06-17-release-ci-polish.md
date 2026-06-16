@@ -703,7 +703,7 @@ After the `test:encoding` paragraph in `## 开发与校验`, add:
 In `## 发布（维护者）`, replace the first paragraph that begins with `本包使用 scripts/release.mjs 一键发布。` with:
 
 ```markdown
-本包使用 `scripts/release.mjs` 一键发布。脚本会按顺序执行：**环境检查 → 编码检查 → typecheck → 测试 → 类型级测试 → bump 版本 → 构建 → pack 冒烟测试 → `npm publish --access public` → git commit + tag**。`git commit`/`tag` 只在 `npm publish` 成功后才执行；任何中途失败都会逐字节回滚 `package.json` / `package-lock.json` 的版本改动，保持工作区干净，不会留下「已提交版本却未发布」的中间态。
+本包使用 `scripts/release.mjs` 一键发布。脚本会按顺序执行：**环境检查 → 编码检查 → typecheck → 测试 → 类型级测试 → bump 版本 → 构建 → pack 冒烟测试 → `npm publish --access public` → git commit + tag**。`git commit`/`tag` 只在 `npm publish` 成功后才执行；创建版本 commit 之前的失败会逐字节回滚 `package.json` / `package-lock.json` 的版本改动，commit/tag/publish 边界上的失败可能需要按 `git status` 和实际发布状态人工清理。
 ```
 
 - [ ] **Step 5: Update release dry-run command comment**
