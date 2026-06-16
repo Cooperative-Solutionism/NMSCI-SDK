@@ -7,8 +7,18 @@ import {
   getConsumeChainByNode,
   getConsumeChainByStart,
   getConsumeChainEdges,
+  getBlockByHash,
+  getCentralPubkeyLockedMsgByCentralPubkey,
+  getFlowNodeLockedMsgByFlowNodePubkey,
+  getFlowNodeRegisterMsgByFlowNodePubkey,
+  getFlowNodeState,
   getReturningFlowRateById,
   getReturningFlowRateByPubkey,
+  getTransactionMountMsgByMountedTransactionRecordId,
+  getTransactionRecordMsgByFlowNodePubkey,
+  listFlowNodes,
+  searchTransactionMountMsgs,
+  searchTransactionRecordMsgs,
   type PageQuery,
   queryConsumeChains,
 } from '../src';
@@ -270,5 +280,82 @@ describe('returning-flow-rate query validation', () => {
     await expect(
       getReturningFlowRateByPubkey(client, { targetPubkey: pubkeyA, sourcePubkey: pubkeyB }),
     ).resolves.toMatchObject({ code: 200 });
+  });
+});
+
+describe('remaining API helper query validation', () => {
+  it('rejects invalid compressed pubkeys', async () => {
+    await expect(getFlowNodeState(client, 'bad-pubkey')).rejects.toThrow(
+      /flowNodePubkey must be a 33-byte compressed public key hex string/,
+    );
+    await expect(getFlowNodeRegisterMsgByFlowNodePubkey(client, 'bad-pubkey')).rejects.toThrow(
+      /flowNodePubkey must be a 33-byte compressed public key hex string/,
+    );
+    await expect(getFlowNodeLockedMsgByFlowNodePubkey(client, 'bad-pubkey')).rejects.toThrow(
+      /flowNodePubkey must be a 33-byte compressed public key hex string/,
+    );
+    await expect(getCentralPubkeyLockedMsgByCentralPubkey(client, 'bad-pubkey')).rejects.toThrow(
+      /centralPubkey must be a 33-byte compressed public key hex string/,
+    );
+    await expect(getTransactionRecordMsgByFlowNodePubkey(client, 'bad-pubkey')).rejects.toThrow(
+      /flowNodePubkey must be a 33-byte compressed public key hex string/,
+    );
+  });
+
+  it('rejects invalid pagination in remaining list and search helpers', async () => {
+    await expect(listFlowNodes(client, { size: 201 })).rejects.toThrow(
+      /flow-nodes.size must be an integer between 1 and 200/,
+    );
+    await expect(searchTransactionRecordMsgs(client, {}, { size: 201 })).rejects.toThrow(
+      /transaction-records.size must be an integer between 1 and 200/,
+    );
+    await expect(searchTransactionMountMsgs(client, {}, { page: -1 })).rejects.toThrow(
+      /transaction-mounts.page must be an integer >= 0/,
+    );
+  });
+
+  it('rejects invalid transaction-record and transaction-mount time ranges', async () => {
+    await expect(searchTransactionRecordMsgs(client, { startTime: 10, endTime: 9 })).rejects.toThrow(
+      /transaction-records.endTime must be >= startTime/,
+    );
+    await expect(searchTransactionMountMsgs(client, { startTime: -1 })).rejects.toThrow(
+      /transaction-mounts.startTime must be an integer >= 0/,
+    );
+  });
+
+  it('rejects invalid transaction-mount mounted transaction record IDs', async () => {
+    await expect(getTransactionMountMsgByMountedTransactionRecordId(client, 'not-a-uuid')).rejects.toThrow(
+      /mountedTransactionRecordId must be a UUID string/,
+    );
+  });
+
+  it('rejects invalid block hashes', async () => {
+    await expect(getBlockByHash(client, 'abc')).rejects.toThrow(
+      /hash must be a 32-byte hex string/,
+    );
+  });
+
+  it('rejects transaction-record filters hidden in pagination before calling fetch', async () => {
+    const counted = createCountingClient();
+
+    await expect(
+      searchTransactionRecordMsgs(counted.client, { flowNodePubkey: pubkeyA }, {
+        consumeNodePubkey: 'bad-pubkey',
+      } as PageQuery),
+    ).rejects.toThrow(/consumeNodePubkey must be a 33-byte compressed public key hex string/);
+
+    expect(counted.fetchCount()).toBe(0);
+  });
+
+  it('rejects transaction-mount filters hidden in pagination before calling fetch', async () => {
+    const counted = createCountingClient();
+
+    await expect(
+      searchTransactionMountMsgs(counted.client, { mountedTransactionRecordId: uuidA }, {
+        mountedTransactionRecordId: 'not-a-uuid',
+      } as PageQuery),
+    ).rejects.toThrow(/mountedTransactionRecordId must be a UUID string/);
+
+    expect(counted.fetchCount()).toBe(0);
   });
 });

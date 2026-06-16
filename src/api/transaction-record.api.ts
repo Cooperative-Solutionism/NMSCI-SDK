@@ -1,4 +1,10 @@
 import { ApiClient, ApiResponse } from './client';
+import {
+  validateCompressedPubkey,
+  validatePageQuery,
+  validateTimeRange,
+  validateUuid,
+} from './query-validation';
 import type { PageQuery, SliceResponseDTO, TransactionRecordMsgRaw } from './types';
 
 export type TransactionRecordMsgResponse = ApiResponse<TransactionRecordMsgRaw>;
@@ -14,6 +20,23 @@ export interface TransactionRecordSearchFilters {
   endTime?: number;
 }
 
+type TransactionRecordSearchQuery = TransactionRecordSearchFilters & PageQuery;
+
+function validateTransactionRecordSearchQuery(
+  filters?: TransactionRecordSearchFilters,
+  pagination?: PageQuery,
+): TransactionRecordSearchQuery {
+  validatePageQuery(filters as PageQuery | undefined, 'transaction-records');
+  validatePageQuery(pagination, 'transaction-records');
+
+  const query = { ...filters, ...pagination } as TransactionRecordSearchQuery;
+  validatePageQuery(query, 'transaction-records');
+  validateCompressedPubkey(query.consumeNodePubkey, 'consumeNodePubkey');
+  validateCompressedPubkey(query.flowNodePubkey, 'flowNodePubkey');
+  validateTimeRange(query.startTime, query.endTime, 'transaction-records');
+  return query;
+}
+
 export async function sendTransactionRecordMsg(
   client: ApiClient,
   body: Uint8Array | number[],
@@ -25,6 +48,7 @@ export async function getTransactionRecordMsgById(
   client: ApiClient,
   id: string,
 ): Promise<ApiResponse<TransactionRecordMsgRaw>> {
+  validateUuid(id, 'id');
   return client.get<TransactionRecordMsgRaw>(`/transaction-records/${encodeURIComponent(id)}`);
 }
 
@@ -36,10 +60,10 @@ export async function searchTransactionRecordMsgs(
   filters?: TransactionRecordSearchFilters,
   pagination?: PageQuery,
 ): Promise<ApiResponse<SliceResponseDTO<TransactionRecordMsgRaw>>> {
-  return client.get<SliceResponseDTO<TransactionRecordMsgRaw>>('/transaction-records', {
-    ...filters,
-    ...pagination,
-  });
+  return client.get<SliceResponseDTO<TransactionRecordMsgRaw>>(
+    '/transaction-records',
+    validateTransactionRecordSearchQuery(filters, pagination),
+  );
 }
 
 export async function getTransactionRecordMsgByConsumeNodePubkey(

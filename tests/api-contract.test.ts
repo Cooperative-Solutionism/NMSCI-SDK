@@ -25,8 +25,8 @@ import type {
 
 const uuidA = '550e8400-e29b-41d4-a716-446655440000';
 const uuidB = '550e8400-e29b-41d4-a716-446655440001';
-const pubkeyA = `02${'11'.repeat(32)}`;
-const pubkeyB = `03${'22'.repeat(32)}`;
+const flowPubkey = `02${'11'.repeat(32)}`;
+const consumePubkey = `03${'22'.repeat(32)}`;
 
 describe('current backend API contracts', () => {
   it('passes page and size to slice-backed query endpoints', async () => {
@@ -46,13 +46,13 @@ describe('current backend API contracts', () => {
       },
     });
 
-    await getTransactionRecordMsgByFlowNodePubkey(client, 'flow', { page: 2, size: 10 });
-    await getTransactionMountMsgByBothPubkeys(client, 'consume', 'flow', { page: 1, size: 25 });
+    await getTransactionRecordMsgByFlowNodePubkey(client, flowPubkey, { page: 2, size: 10 });
+    await getTransactionMountMsgByBothPubkeys(client, consumePubkey, flowPubkey, { page: 1, size: 25 });
     await getConsumeChainByStart(client, uuidA, { isLoop: false, page: 3, size: 5 });
 
     expect(requested).toEqual([
-      'https://example.test/transaction-records?flowNodePubkey=flow&page=2&size=10',
-      'https://example.test/transaction-mounts?consumeNodePubkey=consume&flowNodePubkey=flow&page=1&size=25',
+      `https://example.test/transaction-records?flowNodePubkey=${flowPubkey}&page=2&size=10`,
+      `https://example.test/transaction-mounts?consumeNodePubkey=${consumePubkey}&flowNodePubkey=${flowPubkey}&page=1&size=25`,
       `https://example.test/consume-chains?startId=${uuidA}&isLoop=false&page=3&size=5`,
     ]);
   });
@@ -74,14 +74,14 @@ describe('current backend API contracts', () => {
       },
     });
 
-    await listFlowNodeRegisterMsgs(client, { flowNodePubkey: 'flow-a', page: 2, size: 10 });
-    await listCentralPubkeyEmpowerMsgs(client, { flowNodePubkey: 'flow-b', page: 3, size: 20 });
+    await listFlowNodeRegisterMsgs(client, { flowNodePubkey: flowPubkey, page: 2, size: 10 });
+    await listCentralPubkeyEmpowerMsgs(client, { flowNodePubkey: consumePubkey, page: 3, size: 20 });
     await listFlowNodeLockedMsgs(client, { page: 4, size: 30 });
     await listCentralPubkeyLockedMsgs(client, { page: 5, size: 40 });
 
     expect(requested).toEqual([
-      'https://example.test/flow-node-registrations?flowNodePubkey=flow-a&page=2&size=10',
-      'https://example.test/central-pubkey-empowerments?flowNodePubkey=flow-b&page=3&size=20',
+      `https://example.test/flow-node-registrations?flowNodePubkey=${flowPubkey}&page=2&size=10`,
+      `https://example.test/central-pubkey-empowerments?flowNodePubkey=${consumePubkey}&page=3&size=20`,
       'https://example.test/flow-node-locks?page=4&size=30',
       'https://example.test/central-pubkey-locks?page=5&size=40',
     ]);
@@ -173,8 +173,8 @@ describe('current backend API contracts', () => {
     });
 
     await getConsumeChainEdges(client, {
-      targetPubkey: pubkeyA,
-      sourcePubkey: pubkeyB,
+      targetPubkey: flowPubkey,
+      sourcePubkey: consumePubkey,
       currencyType: 1,
       startTime: 1718352000000000,
       endTime: 1718352999999999,
@@ -183,7 +183,7 @@ describe('current backend API contracts', () => {
     });
 
     expect(requested).toEqual([
-      `https://example.test/consume-chains/edges?targetPubkey=${pubkeyA}&sourcePubkey=${pubkeyB}&currencyType=1&startTime=1718352000000000&endTime=1718352999999999&page=0&size=50`,
+      `https://example.test/consume-chains/edges?targetPubkey=${flowPubkey}&sourcePubkey=${consumePubkey}&currencyType=1&startTime=1718352000000000&endTime=1718352999999999&page=0&size=50`,
     ]);
   });
 
@@ -253,12 +253,12 @@ describe('current backend API contracts', () => {
     const client = new ApiClient({ baseUrl: 'https://example.test', fetch });
     const sdk = new NmsciSdk(client);
 
-    await getFlowNodeState(client, '02aa');
-    await sdk.flowNode.getState('02bb');
+    await getFlowNodeState(client, flowPubkey);
+    await sdk.flowNode.getState(consumePubkey);
 
     expect(requested).toEqual([
-      'https://example.test/flow-nodes/02aa',
-      'https://example.test/flow-nodes/02bb',
+      `https://example.test/flow-nodes/${flowPubkey}`,
+      `https://example.test/flow-nodes/${consumePubkey}`,
     ]);
   });
 });

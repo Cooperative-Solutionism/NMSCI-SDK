@@ -27,12 +27,12 @@ export function validateHexString(value: string | undefined, fieldName: string, 
     return;
   }
 
-  if (value.length === 0 || !HEX_PATTERN.test(value)) {
-    throw new Error(`${fieldName} must be a hex string`);
+  if (expectedBytes !== undefined && value.length !== expectedBytes * 2) {
+    throw new Error(`${fieldName} must be a ${expectedBytes}-byte hex string`);
   }
 
-  if (expectedBytes !== undefined && value.length / 2 !== expectedBytes) {
-    throw new Error(`${fieldName} must be a ${expectedBytes}-byte hex string`);
+  if (value.length === 0 || !HEX_PATTERN.test(value)) {
+    throw new Error(`${fieldName} must be a hex string`);
   }
 }
 
