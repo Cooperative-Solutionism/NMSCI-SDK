@@ -9,6 +9,10 @@ describe('text encoding audit', () => {
         text:
           '\u6B63\u5E38\u4E2D\u6587\u3001English, SDK \u2014 TypeScript, \u5FAE\u79D2\uFF08\u03BCs\uFF09',
       },
+      {
+        file: 'notes.md',
+        text: 'Standalone markers: \u00C3 \u00C2 \u00E2',
+      },
     ]);
 
     expect(findings).toEqual([]);
@@ -45,6 +49,43 @@ describe('text encoding audit', () => {
         file: 'package.json',
         line: 1,
         column: 5,
+        label: 'common UTF-8 mojibake fragment',
+      },
+    ]);
+  });
+
+  it('reports common Western UTF-8 mojibake fragments', () => {
+    const findings = findSuspiciousEncodingMarkers([
+      {
+        file: 'CHANGELOG.md',
+        text:
+          'latin \u00C3\u00A9\nmicro \u00C2\u00B5\ndash \u00E2\u20AC\u201D\nminus \u00E2\u20AC\u201C',
+      },
+    ]);
+
+    expect(findings).toEqual([
+      {
+        file: 'CHANGELOG.md',
+        line: 1,
+        column: 7,
+        label: 'common UTF-8 mojibake fragment',
+      },
+      {
+        file: 'CHANGELOG.md',
+        line: 2,
+        column: 7,
+        label: 'common UTF-8 mojibake fragment',
+      },
+      {
+        file: 'CHANGELOG.md',
+        line: 3,
+        column: 6,
+        label: 'common UTF-8 mojibake fragment',
+      },
+      {
+        file: 'CHANGELOG.md',
+        line: 4,
+        column: 7,
         label: 'common UTF-8 mojibake fragment',
       },
     ]);
