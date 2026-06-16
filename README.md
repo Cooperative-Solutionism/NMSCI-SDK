@@ -167,6 +167,8 @@ import { NmsciSdk } from '@nmsci/sdk';
 const sdk = new NmsciSdk({ baseUrl: 'http://localhost:8080' });
 
 await sdk.flowNodeRegister.send(submitPayload);
+await sdk.flowNodeRegister.list({ page: 0, size: 50 });
+await sdk.centralPubkeyLocked.list({ page: 0, size: 50 });
 await sdk.flowNode.getState(flowNodePubkey);
 await sdk.transactionRecord.getByFlowNodePubkey(flowNodePubkey, { page: 0, size: 50 });
 await sdk.returningFlowRate.getByPubkey({ targetPubkey: flowNodePubkey, currencyType: 1 });
@@ -179,6 +181,14 @@ import { ApiClient } from '@nmsci/sdk/api';
 import { serializeTransactionRecordSubmitPayload } from '@nmsci/sdk/messages';
 import { MSG_SPECS } from '@nmsci/sdk/protocol';
 ```
+
+### Breaking changes / migration
+
+本版本跟随后端 API 合同调整，建议按 major 版本发布：
+
+- `sendCentralPubkeyLockedMsg` 从 `Promise<void>` 改为 `Promise<ApiResponse<CentralPubkeyLockedMsgRaw>>`，成功后可读取后端补齐的落库实体。
+- `getConsumeChainEdges` 从 `ApiResponse<ConsumeChainEdgeRaw[]>` 改为 `ApiResponse<SliceResponseDTO<ConsumeChainEdgeRaw>>`。迁移时把 `response.data.map(...)` 改为 `response.data.content.map(...)`，并根据 `hasNext` 翻页。
+- `BlockInfoRaw` 不再包含 `rawBytes` 字段；后端 `BlockInfo` 响应不输出该字段。
 
 ---
 
@@ -397,9 +407,9 @@ const fullPayload = buildCentralPubkeyLockedFullPayload({
 });
 msg.centralSignature = toHex(await signData(fullPayload, centralPrivateKey)) as Signature;
 
-await client.postBinary('/central-pubkey-locks', serializeCentralPubkeyLockedSubmitPayload(msg));
+const res = await client.postBinary('/central-pubkey-locks', serializeCentralPubkeyLockedSubmitPayload(msg));
 const fullBytes = serializeCentralPubkeyLockedFullMessage(msg); // 187 字节，用于校验后端 rawBytes
-// 注意：此接口成功时无响应体（void）
+// res.data 为后端补齐 confirmTimestamp/centralSignature 后的落库实体
 ```
 
 ### 流转节点冻结（消息类型 3，完整 220 字节，提交 148 字节）
@@ -631,6 +641,9 @@ getFlowNodeRegisterMsgById(client, id: string): Promise<ApiResponse<FlowNodeRegi
 // 按流转节点公钥查询（集合根，返回分页 Slice）
 getFlowNodeRegisterMsgByFlowNodePubkey(client, flowNodePubkey: string, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<FlowNodeRegisterMsgRaw>>>
 // flowNodePubkey: 66字符十六进制字符串
+
+// 集合根（过滤参数可选；全空返回分页全量）
+listFlowNodeRegisterMsgs(client, query?: { flowNodePubkey?: string } & PageQuery): Promise<ApiResponse<SliceResponseDTO<FlowNodeRegisterMsgRaw>>>
 ```
 
 ### 中心公钥授权
@@ -644,16 +657,22 @@ getCentralPubkeyEmpowerMsgById(client, id: string): Promise<ApiResponse<CentralP
 
 // 按流转节点公钥查询（集合根，返回分页 Slice）
 getCentralPubkeyEmpowerMsgByFlowNodePubkey(client, flowNodePubkey: string, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<CentralPubkeyEmpowerMsgRaw>>>
+
+// 集合根（过滤参数可选；全空返回分页全量）
+listCentralPubkeyEmpowerMsgs(client, query?: { flowNodePubkey?: string } & PageQuery): Promise<ApiResponse<SliceResponseDTO<CentralPubkeyEmpowerMsgRaw>>>
 ```
 
 ### 中心公钥冻结
 
 ```typescript
-// 发送冻结信息（成功后无响应体）
-sendCentralPubkeyLockedMsg(client, byteArray: number[]): Promise<void>
+// 发送冻结信息
+sendCentralPubkeyLockedMsg(client, byteArray: number[]): Promise<ApiResponse<CentralPubkeyLockedMsgRaw>>
 
 // 按 UUID 查询
 getCentralPubkeyLockedMsgById(client, id: string): Promise<ApiResponse<CentralPubkeyLockedMsgRaw>>
+
+// 集合根（仅分页）
+listCentralPubkeyLockedMsgs(client, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<CentralPubkeyLockedMsgRaw>>>
 
 // 按中心公钥查询
 getCentralPubkeyLockedMsgByCentralPubkey(client, centralPubkey: string): Promise<ApiResponse<LockedMessageResponseDTO<CentralPubkeyLockedMsgRaw>>>
@@ -667,6 +686,9 @@ sendFlowNodeLockedMsg(client, byteArray: number[]): Promise<ApiResponse<FlowNode
 
 // 按 UUID 查询
 getFlowNodeLockedMsgById(client, id: string): Promise<ApiResponse<FlowNodeLockedMsgRaw>>
+
+// 集合根（仅分页）
+listFlowNodeLockedMsgs(client, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<FlowNodeLockedMsgRaw>>>
 
 // 按流转节点公钥查询
 getFlowNodeLockedMsgByFlowNodePubkey(client, flowNodePubkey: string): Promise<ApiResponse<LockedMessageResponseDTO<FlowNodeLockedMsgRaw>>>
@@ -752,12 +774,17 @@ getConsumeChainByEnd(client, endId: string, query?: boolean | ConsumeChainQuery)
 getConsumeChainByNode(client, nodeId: string, query?: boolean | ConsumeChainQuery): Promise<ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>>
 getConsumeChainByMountedTransaction(client, mountedTransactionId: string, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>>
 
-// 边查询（流入某 target 的边集合，非分页）；target 必填（id 或 pubkey 二选一，不可混用）
-getConsumeChainEdges(client, params: {
-  targetId?: string; targetPubkey?: string;     // 必填其一
-  sourceId?: string; sourcePubkey?: string;
+// 边查询（流入某 target 的边集合，返回分页 Slice）；id 模式和 pubkey 模式二选一，不可混用
+getConsumeChainEdges(client, params: ({
+  targetId: string;
+  sourceId?: string;
+} | {
+  targetPubkey: string;
+  sourcePubkey?: string;
+}) & {
   currencyType?: number; startTime?: number; endTime?: number;  // 时间为微秒
-}): Promise<ApiResponse<ConsumeChainEdgeRaw[]>>
+  page?: number; size?: number;
+}): Promise<ApiResponse<SliceResponseDTO<ConsumeChainEdgeRaw>>>
 ```
 
 ### 回流率

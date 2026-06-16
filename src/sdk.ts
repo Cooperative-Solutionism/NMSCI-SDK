@@ -6,11 +6,13 @@ import {
 import {
   getCentralPubkeyEmpowerMsgByFlowNodePubkey,
   getCentralPubkeyEmpowerMsgById,
+  listCentralPubkeyEmpowerMsgs,
   sendCentralPubkeyEmpowerMsg,
 } from './api/central-pubkey-empower.api';
 import {
   getCentralPubkeyLockedMsgByCentralPubkey,
   getCentralPubkeyLockedMsgById,
+  listCentralPubkeyLockedMsgs,
   sendCentralPubkeyLockedMsg,
 } from './api/central-pubkey-locked.api';
 import { ApiClient, type SdkConfig } from './api/client';
@@ -27,11 +29,13 @@ import { getFlowNodeState, listFlowNodes } from './api/flow-node.api';
 import {
   getFlowNodeLockedMsgByFlowNodePubkey,
   getFlowNodeLockedMsgById,
+  listFlowNodeLockedMsgs,
   sendFlowNodeLockedMsg,
 } from './api/flow-node-locked.api';
 import {
   getFlowNodeRegisterMsgByFlowNodePubkey,
   getFlowNodeRegisterMsgById,
+  listFlowNodeRegisterMsgs,
   sendFlowNodeRegisterMsg,
 } from './api/flow-node-register.api';
 import {
@@ -78,6 +82,7 @@ export class NmsciSdk {
   readonly flowNodeRegister = {
     send: (body: Uint8Array | number[]) => sendFlowNodeRegisterMsg(this.client, body),
     getById: (id: string) => getFlowNodeRegisterMsgById(this.client, id),
+    list: (query?: Parameters<typeof listFlowNodeRegisterMsgs>[1]) => listFlowNodeRegisterMsgs(this.client, query),
     getByFlowNodePubkey: (
       flowNodePubkey: string,
       pagination?: Parameters<typeof getFlowNodeRegisterMsgByFlowNodePubkey>[2],
@@ -87,6 +92,8 @@ export class NmsciSdk {
   readonly centralPubkeyEmpower = {
     send: (body: Uint8Array | number[]) => sendCentralPubkeyEmpowerMsg(this.client, body),
     getById: (id: string) => getCentralPubkeyEmpowerMsgById(this.client, id),
+    list: (query?: Parameters<typeof listCentralPubkeyEmpowerMsgs>[1]) =>
+      listCentralPubkeyEmpowerMsgs(this.client, query),
     getByFlowNodePubkey: (
       flowNodePubkey: string,
       pagination?: Parameters<typeof getCentralPubkeyEmpowerMsgByFlowNodePubkey>[2],
@@ -96,12 +103,16 @@ export class NmsciSdk {
   readonly centralPubkeyLocked = {
     send: (body: Uint8Array | number[]) => sendCentralPubkeyLockedMsg(this.client, body),
     getById: (id: string) => getCentralPubkeyLockedMsgById(this.client, id),
+    list: (pagination?: Parameters<typeof listCentralPubkeyLockedMsgs>[1]) =>
+      listCentralPubkeyLockedMsgs(this.client, pagination),
     getByCentralPubkey: (centralPubkey: string) => getCentralPubkeyLockedMsgByCentralPubkey(this.client, centralPubkey),
   };
 
   readonly flowNodeLocked = {
     send: (body: Uint8Array | number[]) => sendFlowNodeLockedMsg(this.client, body),
     getById: (id: string) => getFlowNodeLockedMsgById(this.client, id),
+    list: (pagination?: Parameters<typeof listFlowNodeLockedMsgs>[1]) =>
+      listFlowNodeLockedMsgs(this.client, pagination),
     getByFlowNodePubkey: (flowNodePubkey: string) => getFlowNodeLockedMsgByFlowNodePubkey(this.client, flowNodePubkey),
   };
 

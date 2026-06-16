@@ -146,7 +146,6 @@ export interface BlockInfoRaw {
   centralSignature: Signature;
   datFilepath: string;
   sourceCodeZipFilepath: string;
-  rawBytes: HexString;
 }
 
 export interface BlockInfo extends Omit<BlockInfoRaw, 'height' | 'maxMsgTimestamp' | 'timestamp'> {

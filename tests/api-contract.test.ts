@@ -3,7 +3,13 @@ import {
   ApiClient,
   NmsciSdk,
   getConsumeChainByStart,
+  getConsumeChainEdges,
+  listCentralPubkeyEmpowerMsgs,
+  listCentralPubkeyLockedMsgs,
+  listFlowNodeLockedMsgs,
+  listFlowNodeRegisterMsgs,
   getFlowNodeState,
+  sendCentralPubkeyLockedMsg,
   getTransactionMountMsgByBothPubkeys,
   getTransactionRecordMsgByFlowNodePubkey,
   normalizeApiResponseSlice,
@@ -43,6 +49,136 @@ describe('current backend API contracts', () => {
       'https://example.test/transaction-records?flowNodePubkey=flow&page=2&size=10',
       'https://example.test/transaction-mounts?consumeNodePubkey=consume&flowNodePubkey=flow&page=1&size=25',
       'https://example.test/consume-chains?startId=chain-start&isLoop=false&page=3&size=5',
+    ]);
+  });
+
+  it('exposes message collection roots with documented optional filters', async () => {
+    const requested: string[] = [];
+    const client = new ApiClient({
+      baseUrl: 'https://example.test',
+      fetch: async (url) => {
+        requested.push(url);
+        return jsonResponse({
+          content: [],
+          page: 0,
+          size: 0,
+          numberOfElements: 0,
+          hasNext: false,
+          hasPrevious: false,
+        });
+      },
+    });
+
+    await listFlowNodeRegisterMsgs(client, { flowNodePubkey: 'flow-a', page: 2, size: 10 });
+    await listCentralPubkeyEmpowerMsgs(client, { flowNodePubkey: 'flow-b', page: 3, size: 20 });
+    await listFlowNodeLockedMsgs(client, { page: 4, size: 30 });
+    await listCentralPubkeyLockedMsgs(client, { page: 5, size: 40 });
+
+    expect(requested).toEqual([
+      'https://example.test/flow-node-registrations?flowNodePubkey=flow-a&page=2&size=10',
+      'https://example.test/central-pubkey-empowerments?flowNodePubkey=flow-b&page=3&size=20',
+      'https://example.test/flow-node-locks?page=4&size=30',
+      'https://example.test/central-pubkey-locks?page=5&size=40',
+    ]);
+  });
+
+  it('returns the persisted entity from central-pubkey-lock POST', async () => {
+    const requested: string[] = [];
+    const client = new ApiClient({
+      baseUrl: 'https://example.test',
+      fetch: async (url) => {
+        requested.push(url);
+        return jsonResponse({
+          id: 'lock-id',
+          msgType: 2,
+          centralPubkey: 'central',
+          centralSignaturePre: 'pre',
+          confirmTimestamp: 123,
+          centralSignature: 'signature',
+          rawBytes: 'raw',
+          txid: 'txid',
+        });
+      },
+    });
+
+    const response = await sendCentralPubkeyLockedMsg(client, [1, 2, 3]);
+
+    expect(requested).toEqual(['https://example.test/central-pubkey-locks']);
+    expect(response.data.id).toBe('lock-id');
+  });
+
+  it('treats consume-chain edge lookup as a paginated slice', async () => {
+    const requested: string[] = [];
+    const client = new ApiClient({
+      baseUrl: 'https://example.test',
+      fetch: async (url) => {
+        requested.push(url);
+        return jsonResponse({
+          content: [{
+            id: 'edge-id',
+            source: 'source-id',
+            target: 'target-id',
+            amount: 100,
+            currencyType: 1,
+            chain: 'chain-id',
+            relatedTransactionRecord: 'record-id',
+            relatedTransactionMount: 'mount-id',
+            relatedTransactionMountTimestamp: 456,
+            isLoop: true,
+          }],
+          page: 1,
+          size: 25,
+          numberOfElements: 1,
+          hasNext: false,
+          hasPrevious: true,
+        });
+      },
+    });
+
+    const response = await getConsumeChainEdges(client, {
+      targetId: 'target-id',
+      sourceId: 'source-id',
+      currencyType: 1,
+      page: 1,
+      size: 25,
+    });
+
+    expect(requested).toEqual([
+      'https://example.test/consume-chains/edges?targetId=target-id&sourceId=source-id&currencyType=1&page=1&size=25',
+    ]);
+    expect(response.data.content[0]?.id).toBe('edge-id');
+    expect(response.data.hasPrevious).toBe(true);
+  });
+
+  it('passes consume-chain edge pubkey mode and time filters', async () => {
+    const requested: string[] = [];
+    const client = new ApiClient({
+      baseUrl: 'https://example.test',
+      fetch: async (url) => {
+        requested.push(url);
+        return jsonResponse({
+          content: [],
+          page: 0,
+          size: 50,
+          numberOfElements: 0,
+          hasNext: false,
+          hasPrevious: false,
+        });
+      },
+    });
+
+    await getConsumeChainEdges(client, {
+      targetPubkey: 'target-pubkey',
+      sourcePubkey: 'source-pubkey',
+      currencyType: 1,
+      startTime: 1718352000000000,
+      endTime: 1718352999999999,
+      page: 0,
+      size: 50,
+    });
+
+    expect(requested).toEqual([
+      'https://example.test/consume-chains/edges?targetPubkey=target-pubkey&sourcePubkey=source-pubkey&currencyType=1&startTime=1718352000000000&endTime=1718352999999999&page=0&size=50',
     ]);
   });
 

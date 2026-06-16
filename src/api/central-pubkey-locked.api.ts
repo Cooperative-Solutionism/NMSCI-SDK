@@ -1,14 +1,15 @@
 import { ApiClient, ApiResponse } from './client';
-import type { CentralPubkeyLockedMsgRaw, LockedMessageResponseDTO } from './types';
+import type { CentralPubkeyLockedMsgRaw, LockedMessageResponseDTO, PageQuery, SliceResponseDTO } from './types';
 
 export type CentralPubkeyLockedMsgResponse = ApiResponse<CentralPubkeyLockedMsgRaw>;
+export type CentralPubkeyLockedMsgListResponse = ApiResponse<SliceResponseDTO<CentralPubkeyLockedMsgRaw>>;
 export type CentralPubkeyLockedMsgLookupResponse = ApiResponse<LockedMessageResponseDTO<CentralPubkeyLockedMsgRaw>>;
 
 export async function sendCentralPubkeyLockedMsg(
   client: ApiClient,
   body: Uint8Array | number[],
-): Promise<void> {
-  return client.postBinaryNoResponse('/central-pubkey-locks', body);
+): Promise<ApiResponse<CentralPubkeyLockedMsgRaw>> {
+  return client.postBinary<CentralPubkeyLockedMsgRaw>('/central-pubkey-locks', body);
 }
 
 export async function getCentralPubkeyLockedMsgById(
@@ -16,6 +17,13 @@ export async function getCentralPubkeyLockedMsgById(
   id: string,
 ): Promise<ApiResponse<CentralPubkeyLockedMsgRaw>> {
   return client.get<CentralPubkeyLockedMsgRaw>(`/central-pubkey-locks/${encodeURIComponent(id)}`);
+}
+
+export async function listCentralPubkeyLockedMsgs(
+  client: ApiClient,
+  pagination?: PageQuery,
+): Promise<ApiResponse<SliceResponseDTO<CentralPubkeyLockedMsgRaw>>> {
+  return client.get<SliceResponseDTO<CentralPubkeyLockedMsgRaw>>('/central-pubkey-locks', pagination);
 }
 
 /**
