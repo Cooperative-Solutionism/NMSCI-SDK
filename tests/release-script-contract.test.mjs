@@ -55,12 +55,12 @@ describe('release and CI command contracts', () => {
       "run('npm run build')",
       "step('打包冒烟测试 / Pack smoke')",
       "run('npm run test:pack:prepared')",
-      "run(`npm publish --access public --dry-run${distTagArg}`)",
+      "run(`npm publish --access public --ignore-scripts --dry-run${distTagArg}`)",
     ]);
     expectInOrder(releaseScript, [
       "run('npm run test:pack:prepared')",
       "step('发布到 npm / npm publish')",
-      "run(`npm publish --access public${distTagArg}${otpArg}`)",
+      "run(`npm publish --access public --ignore-scripts${distTagArg}${otpArg}`)",
     ]);
   });
 

@@ -4,11 +4,15 @@
  * @nmsci/sdk 自动发布脚本 / Automated release script
  *
  * 流程：环境检查 → 编码检查 → typecheck → 测试 → 类型级测试 → bump 版本
- *      → 构建 → pack 冒烟测试 → `npm publish --access public` → git commit + tag。
+ *      → 构建 → pack 冒烟测试 → `npm publish --access public --ignore-scripts` → git commit + tag。
  *
  * 设计原则：git commit / tag 只在 `npm publish` 成功之后执行；创建版本 commit
  * 之前的失败会逐字节回滚 package.json / package-lock.json 的版本改动。commit/tag/publish
  * 边界失败可能需要按 `git status` 和实际发布状态人工清理。
+ *
+ * Release publish uses `npm publish --ignore-scripts` so the explicit quality
+ * gate, build, and pack smoke are the only release build path. Manual
+ * `npm publish` still runs package.json `prepublishOnly` as a safety net.
  *
  * 用法见 `node scripts/release.mjs --help`。
  */
@@ -101,7 +105,7 @@ bump（默认 patch）:
   或具体版本号，如 2.5.0、2.5.0-beta.0
 
 options:
-  --dry-run          预演：跑检查/测试/构建/pack smoke 并执行 npm publish --dry-run，不真正发布、不提交
+  --dry-run          预演：跑检查/测试/构建/pack smoke 并执行 npm publish --ignore-scripts --dry-run，不真正发布、不提交
   --skip-tests       跳过发布前质量门禁（仍会构建和执行 pack smoke，不推荐）
   --tag <dist-tag>   npm dist-tag（默认 latest，可用 next/beta 等）
   --preid <id>       预发布标识（配合 prerelease/prepatch，如 beta）
@@ -111,6 +115,11 @@ options:
   --allow-dirty      允许工作区存在未提交更改
   -y, --yes          跳过所有交互确认（用于 CI / 非交互式）
   -h, --help         显示本帮助
+
+release publish:
+  The script runs explicit build + pack smoke first, then calls npm publish
+  with --ignore-scripts so npm lifecycle scripts do not rebuild dist. Manual
+  npm publish still uses package.json prepublishOnly as a safety net.
 
 示例:
   npm run release                          # 补丁版本（如 2.0.1 → 2.0.2）
@@ -239,8 +248,8 @@ async function main() {
   const otpArg = flags.otp ? ` --otp ${flags.otp}` : '';
 
   if (flags.dryRun) {
-    step('发布预演 / npm publish --dry-run');
-    run(`npm publish --access public --dry-run${distTagArg}`);
+    step('发布预演 / npm publish --ignore-scripts --dry-run');
+    run(`npm publish --access public --ignore-scripts --dry-run${distTagArg}`);
     rollbackVersion();
     ok('DRY RUN 完成：未发布、未提交，已回滚版本号。');
     return;
@@ -248,7 +257,7 @@ async function main() {
 
   step('发布到 npm / npm publish');
   try {
-    run(`npm publish --access public${distTagArg}${otpArg}`);
+    run(`npm publish --access public --ignore-scripts${distTagArg}${otpArg}`);
   } catch {
     rollbackVersion();
     die('npm publish 失败，已回滚版本号（未产生 git 提交 / 标签）。请检查上方错误后重试。');

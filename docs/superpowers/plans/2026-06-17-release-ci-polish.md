@@ -566,13 +566,13 @@ to:
 Update the dry-run line from:
 
 ```text
-  --dry-run          预演：跑检查/测试/构建并执行 npm publish --dry-run，不真正发布、不提交
+  --dry-run          预演：跑检查/测试/构建并执行 npm publish --ignore-scripts --dry-run，不真正发布、不提交
 ```
 
 to:
 
 ```text
-  --dry-run          预演：跑检查/测试/构建/pack smoke 并执行 npm publish --dry-run，不真正发布、不提交
+  --dry-run          预演：跑检查/测试/构建/pack smoke 并执行 npm publish --ignore-scripts --dry-run，不真正发布、不提交
 ```
 
 - [ ] **Step 6: Update CI workflow command order**
@@ -695,7 +695,7 @@ npm run test:pack:prepared
 After the `test:encoding` paragraph in `## 开发与校验`, add:
 
 ```markdown
-`test:pack:prepared` 假定 `dist` 已由上一条 `npm run build` 生成，用于 CI / release 流程避免重复构建。单独在本地检查发布包时仍可运行 `npm run test:pack`，它会先构建再执行 pack 冒烟测试。
+`test:pack:prepared` 假定 `dist` 已由上一条 `npm run build` 生成，用于 CI / release 的构建后 pack 冒烟检查，避免 pack 检查自身重复构建。release 脚本在 publish 阶段还会使用 `--ignore-scripts` 跳过 npm lifecycle scripts，确保最终发布产物仍来自显式 build + pack smoke 路径。单独在本地检查发布包时仍可运行 `npm run test:pack`，它会先构建再执行 pack 冒烟测试。
 ```
 
 - [ ] **Step 4: Update release paragraph**
@@ -703,7 +703,7 @@ After the `test:encoding` paragraph in `## 开发与校验`, add:
 In `## 发布（维护者）`, replace the first paragraph that begins with `本包使用 scripts/release.mjs 一键发布。` with:
 
 ```markdown
-本包使用 `scripts/release.mjs` 一键发布。脚本会按顺序执行：**环境检查 → 编码检查 → typecheck → 测试 → 类型级测试 → bump 版本 → 构建 → pack 冒烟测试 → `npm publish --access public` → git commit + tag**。`git commit`/`tag` 只在 `npm publish` 成功后才执行；创建版本 commit 之前的失败会逐字节回滚 `package.json` / `package-lock.json` 的版本改动，commit/tag/publish 边界上的失败可能需要按 `git status` 和实际发布状态人工清理。
+本包使用 `scripts/release.mjs` 一键发布。脚本会按顺序执行：**环境检查 → 编码检查 → typecheck → 测试 → 类型级测试 → bump 版本 → 构建 → pack 冒烟测试 → `npm publish --access public --ignore-scripts` → git commit + tag**。发布阶段会跳过 npm lifecycle scripts，因为显式 build + pack smoke 已完成；`package.json` 的 `prepublishOnly` 仍保留为手动 `npm publish` 的安全网。`git commit`/`tag` 只在 `npm publish` 成功后才执行；创建版本 commit 之前的失败会逐字节回滚 `package.json` / `package-lock.json` 的版本改动，commit/tag/publish 边界上的失败可能需要按 `git status` 和实际发布状态人工清理。
 ```
 
 - [ ] **Step 5: Update release dry-run command comment**
@@ -711,13 +711,13 @@ In `## 发布（维护者）`, replace the first paragraph that begins with `本
 In the release command block, replace:
 
 ```bash
-# 预演（强烈建议先跑一遍）：跑测试/构建并执行 npm publish --dry-run，不真正发布
+# 预演（强烈建议先跑一遍）：跑测试/构建并执行 npm publish --ignore-scripts --dry-run，不真正发布
 ```
 
 with:
 
 ```bash
-# 预演（强烈建议先跑一遍）：跑完整门禁、构建、pack 冒烟，并执行 npm publish --dry-run，不真正发布
+# 预演（强烈建议先跑一遍）：跑完整门禁、构建、pack 冒烟，并执行 npm publish --ignore-scripts --dry-run，不真正发布
 ```
 
 - [ ] **Step 6: Verify README references**

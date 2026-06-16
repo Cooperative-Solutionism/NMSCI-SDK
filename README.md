@@ -1076,20 +1076,20 @@ npm run test:pack:prepared
 
 `test:encoding` 会扫描已跟踪的文本文件，发现 Unicode replacement character 或常见 UTF-8 mojibake 标记时失败。不要仅凭 PowerShell 终端显示判断文件损坏；以 UTF-8 文件内容和该检查结果为准。
 
-`test:pack:prepared` 假定 `dist` 已由上一条 `npm run build` 生成，用于 CI / release 流程避免重复构建。单独在本地检查发布包时仍可运行 `npm run test:pack`，它会先构建再执行 pack 冒烟测试。
+`test:pack:prepared` 假定 `dist` 已由上一条 `npm run build` 生成，用于 CI / release 的构建后 pack 冒烟检查，避免 pack 检查自身重复构建。release 脚本在 publish 阶段还会使用 `--ignore-scripts` 跳过 npm lifecycle scripts，确保最终发布产物仍来自显式 build + pack smoke 路径。单独在本地检查发布包时仍可运行 `npm run test:pack`，它会先构建再执行 pack 冒烟测试。
 
 ---
 
 ## 发布（维护者）
 
-本包使用 `scripts/release.mjs` 一键发布。脚本会按顺序执行：**环境检查 → 编码检查 → typecheck → 测试 → 类型级测试 → bump 版本 → 构建 → pack 冒烟测试 → `npm publish --access public` → git commit + tag**。`git commit`/`tag` 只在 `npm publish` 成功后才执行；创建版本 commit 之前的失败会逐字节回滚 `package.json` / `package-lock.json` 的版本改动，commit/tag/publish 边界上的失败可能需要按 `git status` 和实际发布状态人工清理。
+本包使用 `scripts/release.mjs` 一键发布。脚本会按顺序执行：**环境检查 → 编码检查 → typecheck → 测试 → 类型级测试 → bump 版本 → 构建 → pack 冒烟测试 → `npm publish --access public --ignore-scripts` → git commit + tag**。发布阶段会跳过 npm lifecycle scripts，因为显式 build + pack smoke 已完成；`package.json` 的 `prepublishOnly` 仍保留为手动 `npm publish` 的安全网。`git commit`/`tag` 只在 `npm publish` 成功后才执行；创建版本 commit 之前的失败会逐字节回滚 `package.json` / `package-lock.json` 的版本改动，commit/tag/publish 边界上的失败可能需要按 `git status` 和实际发布状态人工清理。
 
 > 当前 GitHub Actions 只做验证，不自动发布。若后续启用 npm Trusted Publishing / provenance，需要先在 npm 包侧配置 trusted publisher，再增加带 `id-token: write` 权限的发布 workflow，并使用满足 npm 要求的 Node/npm 版本。
 
 前置条件：工作区干净、已 `npm login`，建议在 `main` / `dev` 分支上操作。
 
 ```bash
-# 预演（强烈建议先跑一遍）：跑完整门禁、构建、pack 冒烟，并执行 npm publish --dry-run，不真正发布
+# 预演（强烈建议先跑一遍）：跑完整门禁、构建、pack 冒烟，并执行 npm publish --ignore-scripts --dry-run，不真正发布
 npm run release:dry
 
 # 正式发布
