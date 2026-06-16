@@ -59,7 +59,7 @@ export function runSmokePack(options = parseSmokePackArgs()) {
       runNpm(['run', 'build']);
     }
 
-    const packJson = captureNpm(['pack', '--json', '--pack-destination', tempDir]);
+    const packJson = captureNpm(['pack', '--ignore-scripts', '--json', '--pack-destination', tempDir]);
     const [{ filename }] = JSON.parse(packJson);
     const tarball = join(tempDir, filename);
 

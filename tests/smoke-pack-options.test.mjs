@@ -1,6 +1,9 @@
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parseSmokePackArgs } from '../scripts/smoke-pack.mjs';
+
+const smokePackScript = readFileSync('scripts/smoke-pack.mjs', 'utf8');
 
 describe('smoke-pack CLI options', () => {
   it('builds by default', () => {
@@ -31,5 +34,11 @@ describe('smoke-pack CLI options', () => {
     });
 
     expect(output).toBe('{"skipBuild":true}');
+  });
+
+  it('packs without running npm lifecycle scripts', () => {
+    expect(smokePackScript).toContain(
+      "['pack', '--ignore-scripts', '--json', '--pack-destination', tempDir]",
+    );
   });
 });
