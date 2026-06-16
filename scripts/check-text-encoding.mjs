@@ -2,23 +2,19 @@
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 
 const textFilePattern = /\.(?:md|ts|tsx|js|mjs|json|ya?ml)$/u;
 
 const suspiciousPatterns = [
   { label: 'Unicode replacement character U+FFFD', pattern: /\uFFFD/gu },
-  { label: 'common UTF-8 mojibake marker U+9225', pattern: /\u9225/gu },
-  { label: 'common UTF-8 mojibake marker U+00C3', pattern: /\u00C3/gu },
-  { label: 'common UTF-8 mojibake marker U+00C2', pattern: /\u00C2/gu },
-  { label: 'common UTF-8 mojibake marker U+951B', pattern: /\u951B/gu },
-  { label: 'common UTF-8 mojibake marker U+9286', pattern: /\u9286/gu },
-  { label: 'common UTF-8 mojibake marker U+6D93', pattern: /\u6D93/gu },
-  { label: 'common UTF-8 mojibake marker U+95B3', pattern: /\u95B3/gu },
-  { label: 'common UTF-8 mojibake marker U+8119', pattern: /\u8119/gu },
-  { label: 'common UTF-8 mojibake marker U+8117', pattern: /\u8117/gu },
+  {
+    label: 'common UTF-8 mojibake fragment',
+    pattern: /(?:\u9225[?\u2122\u0153]|\u951B[?\u5c7b\u5c8c]?|\u9286[\u4e63\u20ac]|\u9429[\uE000-\uF8FF]|\u6D93[\u5a49\u7ec4\u54c4])/gu,
+  },
 ];
 
-function getTrackedFiles() {
+export function getTrackedTextFiles() {
   return execFileSync('git', ['ls-files'], { encoding: 'utf8' })
     .split(/\r?\n/u)
     .filter(Boolean)
@@ -34,28 +30,114 @@ function getLineColumn(text, index) {
   };
 }
 
-const findings = [];
+function getMarkdownFencedCodeRanges(text) {
+  const ranges = [];
+  const linePattern = /.*(?:\r?\n|$)/gu;
+  let fenceStart = 0;
+  let fenceMarker = '';
+  let fenceLength = 0;
+  let inFence = false;
 
-for (const file of getTrackedFiles()) {
-  const text = readFileSync(file, 'utf8');
-
-  for (const { label, pattern } of suspiciousPatterns) {
-    pattern.lastIndex = 0;
-
-    let match;
-    while ((match = pattern.exec(text)) !== null) {
-      const location = getLineColumn(text, match.index);
-      findings.push(`${file}:${location.line}:${location.column} ${label}`);
+  let match;
+  while ((match = linePattern.exec(text)) !== null) {
+    const line = match[0];
+    if (line === '') {
+      break;
     }
+
+    const fenceMatch = /^[ \t]{0,3}(`{3,}|~{3,})/u.exec(line);
+    if (fenceMatch) {
+      const marker = fenceMatch[1][0];
+      const length = fenceMatch[1].length;
+
+      if (!inFence) {
+        inFence = true;
+        fenceStart = match.index;
+        fenceMarker = marker;
+        fenceLength = length;
+      } else if (marker === fenceMarker && length >= fenceLength) {
+        ranges.push({ start: fenceStart, end: match.index + line.length });
+        inFence = false;
+      }
+    }
+  }
+
+  if (inFence) {
+    ranges.push({ start: fenceStart, end: text.length });
+  }
+
+  return ranges;
+}
+
+function getIgnoredRanges(file, text) {
+  const normalizedFile = file.replaceAll('\\', '/');
+  if (!/^docs\/superpowers\/plans\/.+\.md$/iu.test(normalizedFile)) {
+    return [];
+  }
+
+  return getMarkdownFencedCodeRanges(text);
+}
+
+function isIgnoredIndex(ranges, index) {
+  return ranges.some(range => index >= range.start && index < range.end);
+}
+
+export function findSuspiciousEncodingMarkers(files) {
+  const findings = [];
+
+  for (const { file, text } of files) {
+    const ignoredRanges = getIgnoredRanges(file, text);
+
+    for (const { label, pattern } of suspiciousPatterns) {
+      pattern.lastIndex = 0;
+
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        if (isIgnoredIndex(ignoredRanges, match.index)) {
+          continue;
+        }
+
+        const location = getLineColumn(text, match.index);
+        findings.push({
+          file,
+          line: location.line,
+          column: location.column,
+          label,
+        });
+      }
+    }
+  }
+
+  return findings;
+}
+
+export function scanTrackedTextFiles() {
+  return findSuspiciousEncodingMarkers(
+    getTrackedTextFiles().map(file => ({
+      file,
+      text: readFileSync(file, 'utf8'),
+    })),
+  );
+}
+
+export function formatFinding(finding) {
+  return `${finding.file}:${finding.line}:${finding.column} ${finding.label}`;
+}
+
+export function runEncodingAudit() {
+  const findings = scanTrackedTextFiles();
+
+  if (findings.length > 0) {
+    console.error('Suspicious text encoding markers found:');
+    for (const finding of findings) {
+      console.error(`- ${formatFinding(finding)}`);
+    }
+    process.exitCode = 1;
+  } else {
+    console.log('No suspicious text encoding markers found in tracked text files.');
   }
 }
 
-if (findings.length > 0) {
-  console.error('Suspicious text encoding markers found:');
-  for (const finding of findings) {
-    console.error(`- ${finding}`);
-  }
-  process.exitCode = 1;
-} else {
-  console.log('No suspicious text encoding markers found in tracked text files.');
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  runEncodingAudit();
 }
