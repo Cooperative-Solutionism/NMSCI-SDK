@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const fallbackNpmCli = resolve(root, 'node_modules/npm/bin/npm-cli.js');
@@ -14,7 +14,19 @@ if (!npmCli) {
   throw new Error('Unable to locate npm CLI. Run this script through npm or install npm locally.');
 }
 
-const tempDir = mkdtempSync(join(tmpdir(), 'nmsci-sdk-pack-'));
+export function parseSmokePackArgs(argv = process.argv.slice(2)) {
+  const options = { skipBuild: false };
+
+  for (const arg of argv) {
+    if (arg === '--skip-build') {
+      options.skipBuild = true;
+    } else {
+      throw new Error(`Unknown smoke-pack option: ${arg}`);
+    }
+  }
+
+  return options;
+}
 
 const run = (cmd, args, options = {}) => {
   execFileSync(cmd, args, {
@@ -34,23 +46,28 @@ const capture = (cmd, args, options = {}) =>
 const runNpm = (args, options = {}) => run(process.execPath, [npmCli, ...args], options);
 const captureNpm = (args, options = {}) => capture(process.execPath, [npmCli, ...args], options);
 
-try {
-  runNpm(['run', 'build']);
+export function runSmokePack(options = parseSmokePackArgs()) {
+  const tempDir = mkdtempSync(join(tmpdir(), 'nmsci-sdk-pack-'));
 
-  const packJson = captureNpm(['pack', '--json', '--pack-destination', tempDir]);
-  const [{ filename }] = JSON.parse(packJson);
-  const tarball = join(tempDir, filename);
+  try {
+    if (!options.skipBuild) {
+      runNpm(['run', 'build']);
+    }
 
-  writeFileSync(join(tempDir, 'package.json'), JSON.stringify({
-    name: 'nmsci-sdk-pack-smoke',
-    version: '1.0.0',
-    private: true,
-    type: 'module',
-  }, null, 2));
+    const packJson = captureNpm(['pack', '--json', '--pack-destination', tempDir]);
+    const [{ filename }] = JSON.parse(packJson);
+    const tarball = join(tempDir, filename);
 
-  runNpm(['install', '--ignore-scripts', '--no-audit', '--no-fund', tarball], { cwd: tempDir });
+    writeFileSync(join(tempDir, 'package.json'), JSON.stringify({
+      name: 'nmsci-sdk-pack-smoke',
+      version: '1.0.0',
+      private: true,
+      type: 'module',
+    }, null, 2));
 
-  writeFileSync(join(tempDir, 'esm-smoke.mjs'), `
+    runNpm(['install', '--ignore-scripts', '--no-audit', '--no-fund', tarball], { cwd: tempDir });
+
+    writeFileSync(join(tempDir, 'esm-smoke.mjs'), `
 const entries = ['@nmsci/sdk', '@nmsci/sdk/api', '@nmsci/sdk/messages', '@nmsci/sdk/protocol'];
 for (const entry of entries) {
   const mod = await import(entry);
@@ -60,7 +77,7 @@ for (const entry of entries) {
 }
 `);
 
-  writeFileSync(join(tempDir, 'cjs-smoke.cjs'), `
+    writeFileSync(join(tempDir, 'cjs-smoke.cjs'), `
 const entries = ['@nmsci/sdk', '@nmsci/sdk/api', '@nmsci/sdk/messages', '@nmsci/sdk/protocol'];
 for (const entry of entries) {
   const mod = require(entry);
@@ -70,8 +87,13 @@ for (const entry of entries) {
 }
 `);
 
-  execFileSync(process.execPath, [join(tempDir, 'esm-smoke.mjs')], { cwd: tempDir, stdio: 'inherit' });
-  execFileSync(process.execPath, [join(tempDir, 'cjs-smoke.cjs')], { cwd: tempDir, stdio: 'inherit' });
-} finally {
-  rmSync(tempDir, { recursive: true, force: true });
+    execFileSync(process.execPath, [join(tempDir, 'esm-smoke.mjs')], { cwd: tempDir, stdio: 'inherit' });
+    execFileSync(process.execPath, [join(tempDir, 'cjs-smoke.cjs')], { cwd: tempDir, stdio: 'inherit' });
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  runSmokePack();
 }

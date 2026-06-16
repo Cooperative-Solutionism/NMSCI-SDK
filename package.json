@@ -42,6 +42,7 @@
     "test": "vitest run",
     "test:types": "tsc --noEmit -p tsconfig.type-tests.json",
     "test:pack": "node scripts/smoke-pack.mjs",
+    "test:pack:prepared": "node scripts/smoke-pack.mjs --skip-build",
     "test:encoding": "node scripts/check-text-encoding.mjs",
     "test:watch": "vitest",
     "release": "node scripts/release.mjs",
