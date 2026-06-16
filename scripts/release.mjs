@@ -7,7 +7,7 @@
  *      → 构建 → pack 冒烟测试 → `npm publish --access public` → git commit + tag。
  *
  * 设计原则：git commit / tag 只在 `npm publish` 成功之后执行；创建版本 commit
- * 之前的失败会回滚 package.json / package-lock.json 的版本改动。commit/tag/publish
+ * 之前的失败会逐字节回滚 package.json / package-lock.json 的版本改动。commit/tag/publish
  * 边界失败可能需要按 `git status` 和实际发布状态人工清理。
  *
  * 用法见 `node scripts/release.mjs --help`。
@@ -66,7 +66,7 @@ const snapshotVersionFiles = () => {
     .filter(existsSync)
     .map((path) => ({ path, content: readFileSync(path) }));
 };
-/** 用快照逐字节还原版本文件，恢复干净工作区。 */
+/** 用快照逐字节还原版本文件改动。 */
 const rollbackVersion = () => {
   for (const { path, content } of versionFileSnapshots) {
     try { writeFileSync(path, content); } catch { /* ignore */ }
