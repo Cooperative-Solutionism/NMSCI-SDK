@@ -101,8 +101,8 @@ bump（默认 patch）:
   或具体版本号，如 2.5.0、2.5.0-beta.0
 
 options:
-  --dry-run          预演：跑检查/测试/构建并执行 npm publish --dry-run，不真正发布、不提交
-  --skip-tests       跳过 typecheck 与单元测试（不推荐）
+  --dry-run          预演：跑检查/测试/构建/pack smoke 并执行 npm publish --dry-run，不真正发布、不提交
+  --skip-tests       跳过发布前质量门禁（仍会构建和执行 pack smoke，不推荐）
   --tag <dist-tag>   npm dist-tag（默认 latest，可用 next/beta 等）
   --preid <id>       预发布标识（配合 prerelease/prepatch，如 beta）
   --otp <code>       npm 双因素验证一次性密码
@@ -192,12 +192,16 @@ async function main() {
 
   // ── 2. 质量门禁 ───────────────────────────────────────────────────────────
   if (flags.skipTests) {
-    warn('已跳过 typecheck 与单元测试（--skip-tests）。');
+    warn('已跳过发布前质量门禁（--skip-tests）；仍会执行构建与打包冒烟测试。');
   } else {
+    step('文本编码检查 / Text encoding');
+    run('npm run test:encoding');
     step('类型检查 / Typecheck');
     run('npm run typecheck');
     step('单元测试 / Tests');
     run('npm test');
+    step('类型级测试 / Type tests');
+    run('npm run test:types');
     ok('质量门禁通过。');
   }
 
@@ -223,10 +227,12 @@ async function main() {
     die('已取消，已回滚版本号。', 0);
   }
 
-  // ── 5. 构建 ───────────────────────────────────────────────────────────────
+  // ── 5. 构建与打包冒烟测试 ─────────────────────────────────────────────────
   step('构建 / Build');
   run('npm run build');
-  ok('构建完成。');
+  step('打包冒烟测试 / Pack smoke');
+  run('npm run test:pack:prepared');
+  ok('构建与打包冒烟测试完成。');
 
   // ── 6. 发布 ───────────────────────────────────────────────────────────────
   const distTagArg = flags.distTag && flags.distTag !== 'latest' ? ` --tag ${flags.distTag}` : '';
