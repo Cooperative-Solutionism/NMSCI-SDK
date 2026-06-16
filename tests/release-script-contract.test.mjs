@@ -1,9 +1,15 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const releaseScript = readFileSync('scripts/release.mjs', 'utf8');
 const ciWorkflow = readFileSync('.github/workflows/ci.yml', 'utf8');
 const normalizedCiWorkflow = ciWorkflow.replace(/\r\n/g, '\n');
+const workflowSources = readdirSync('.github/workflows')
+  .filter((file) => /\.ya?ml$/i.test(file))
+  .map((file) => ({
+    file,
+    source: readFileSync(`.github/workflows/${file}`, 'utf8'),
+  }));
 
 function expectInOrder(source, snippets) {
   let previous = -1;
@@ -18,6 +24,13 @@ function expectInOrder(source, snippets) {
 function expectNotContains(source, snippets) {
   for (const snippet of snippets) {
     expect(source, `Forbidden snippet: ${snippet}`).not.toContain(snippet);
+  }
+}
+
+function expectNoWorkflowContains(snippets) {
+  for (const { file, source } of workflowSources) {
+    expectNotContains(source, snippets);
+    expect(source.replace(/\r\n/g, '\n'), `Forbidden tag trigger in ${file}`).not.toMatch(/^\s*tags(?:-ignore)?:/m);
   }
 }
 
@@ -54,7 +67,8 @@ describe('release and CI command contracts', () => {
   it('keeps CI validation-only and avoids duplicate build work', () => {
     expect(normalizedCiWorkflow).toContain("on:\n  push:\n    branches:\n      - '**'\n  pull_request:");
     expect(normalizedCiWorkflow).not.toMatch(/^\s*tags(?:-ignore)?:/m);
-    expectNotContains(ciWorkflow, [
+    expect(normalizedCiWorkflow).not.toMatch(/^\s*run:\s*npm run test:pack\s*$/m);
+    expectNoWorkflowContains([
       'NODE_AUTH_TOKEN',
       'NPM_TOKEN',
       '--provenance',
