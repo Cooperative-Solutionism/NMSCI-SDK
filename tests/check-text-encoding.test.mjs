@@ -59,7 +59,7 @@ describe('text encoding audit', () => {
       {
         file: 'CHANGELOG.md',
         text:
-          'latin \u00C3\u00A9\nmicro \u00C2\u00B5\ndash \u00E2\u20AC\u201D\nminus \u00E2\u20AC\u201C\nc1 em \u00E2\u0080\u0094\nc1 en \u00E2\u0080\u0093',
+          'latin \u00C3\u00A9\nmicro \u00C2\u00B5\ndash \u00E2\u20AC\u201D\nminus \u00E2\u20AC\u201C\nquote \u00E2\u20AC\u0153\nsingle \u00E2\u20AC\u02DC\nc1 em \u00E2\u0080\u0094\nc1 en \u00E2\u0080\u0093',
       },
     ]);
 
@@ -97,6 +97,18 @@ describe('text encoding audit', () => {
       {
         file: 'CHANGELOG.md',
         line: 6,
+        column: 8,
+        label: 'common UTF-8 mojibake fragment',
+      },
+      {
+        file: 'CHANGELOG.md',
+        line: 7,
+        column: 7,
+        label: 'common UTF-8 mojibake fragment',
+      },
+      {
+        file: 'CHANGELOG.md',
+        line: 8,
         column: 7,
         label: 'common UTF-8 mojibake fragment',
       },
