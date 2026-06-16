@@ -12,6 +12,7 @@ interface ApiContractEndpoint {
   envelope: 'response-result' | 'raw-static';
   sdkFunctions: string[];
   sdkGroups: string[];
+  clientMethods?: string[];
 }
 
 interface ApiContract {
@@ -78,9 +79,13 @@ describe('machine-readable backend API contract', () => {
     }
   });
 
-  it('keeps static file resources explicit until raw download helpers are added', () => {
+  it('maps raw static resources to low-level ApiClient raw helpers', () => {
     const contract = readContract();
     const rawStaticEndpoints = contract.endpoints.filter(endpoint => endpoint.envelope === 'raw-static');
+    const client = new api.ApiClient({
+      baseUrl: 'https://example.test',
+      fetch: async () => new Response('raw', { status: 200 }),
+    });
 
     expect(rawStaticEndpoints.map(endpoint => `${endpoint.method} ${endpoint.path}`)).toEqual([
       'GET /dat/**',
@@ -89,6 +94,10 @@ describe('machine-readable backend API contract', () => {
     for (const endpoint of rawStaticEndpoints) {
       expect(endpoint.sdkFunctions).toEqual([]);
       expect(endpoint.sdkGroups).toEqual([]);
+      expect(endpoint.clientMethods, endpoint.id).toEqual(['getRaw', 'download']);
+      for (const clientMethod of endpoint.clientMethods || []) {
+        expect(typeof readGroupPath(client, clientMethod), `${endpoint.id}: ${clientMethod}`).toBe('function');
+      }
     }
   });
 });

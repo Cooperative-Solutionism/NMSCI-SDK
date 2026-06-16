@@ -334,7 +334,8 @@
       "path": "/dat/**",
       "envelope": "raw-static",
       "sdkFunctions": [],
-      "sdkGroups": []
+      "sdkGroups": [],
+      "clientMethods": ["getRaw", "download"]
     },
     {
       "id": "static.sourceCodeArchives",
@@ -342,7 +343,8 @@
       "path": "/source-code/**",
       "envelope": "raw-static",
       "sdkFunctions": [],
-      "sdkGroups": []
+      "sdkGroups": [],
+      "clientMethods": ["getRaw", "download"]
     }
   ]
 }

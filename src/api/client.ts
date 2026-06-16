@@ -61,6 +61,28 @@ export class ApiClient {
     });
   }
 
+  async getRaw(path: string, params?: QueryParams): Promise<Response> {
+    const url = this.buildUrl(path, params);
+    const response = await this.fetchWithTimeout(url, {
+      method: 'GET',
+      headers: this.buildHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new ApiClientError(`HTTP request failed with status ${response.status}`, {
+        url,
+        status: response.status,
+      });
+    }
+
+    return response;
+  }
+
+  async download(path: string, params?: QueryParams): Promise<ArrayBuffer> {
+    const response = await this.getRaw(path, params);
+    return response.arrayBuffer();
+  }
+
   async post<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${path}`;
     const init: RequestInit = {

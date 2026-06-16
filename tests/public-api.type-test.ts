@@ -26,6 +26,9 @@ declare const uuidB: string;
 declare const pubkeyA: string;
 declare const pubkeyB: string;
 
+expectTypeOf<ReturnType<typeof client.getRaw>>().toEqualTypeOf<Promise<Response>>();
+expectTypeOf<ReturnType<typeof client.download>>().toEqualTypeOf<Promise<ArrayBuffer>>();
+
 const consumeEdgeById: ConsumeChainEdgeQuery = {
   targetId: uuidA,
   sourceId: uuidB,
