@@ -3,7 +3,10 @@ import {
   validateCompressedPubkey,
   validateNoIdPubkeyMix,
   validatePageQuery,
+  validateRequiredCompressedPubkey,
+  validateRequiredParams,
   validateRequiredTargetMode,
+  validateRequiredUuid,
   validateTimeRange,
   validateUuid,
 } from './query-validation';
@@ -105,15 +108,16 @@ function validateConsumeChainConvenienceQuery(query?: boolean | ConsumeChainQuer
   validatePageQuery(query, 'consume-chains');
 }
 
-function validateConsumeChainEdgeQuery(params: ConsumeChainEdgeQuery): void {
+function validateConsumeChainEdgeQuery(params: ConsumeChainEdgeQuery | undefined): void {
+  validateRequiredParams(params, 'consume-chains/edges');
   validatePageQuery(params, 'consume-chains/edges');
   validateTimeRange(params.startTime, params.endTime, 'consume-chains/edges');
   const mode = validateRequiredTargetMode(params as Record<string, unknown>, 'consume-chains/edges');
   if (mode === 'id') {
-    validateUuid(params.targetId, 'targetId');
+    validateRequiredUuid(params.targetId, 'targetId');
     validateUuid(params.sourceId, 'sourceId');
   } else {
-    validateCompressedPubkey(params.targetPubkey, 'targetPubkey');
+    validateRequiredCompressedPubkey(params.targetPubkey, 'targetPubkey');
     validateCompressedPubkey(params.sourcePubkey, 'sourcePubkey');
   }
 }
@@ -122,7 +126,7 @@ export async function getConsumeChainById(
   client: ApiClient,
   id: string,
 ): Promise<ApiResponse<ConsumeChainResponseDTORaw>> {
-  validateUuid(id, 'id');
+  validateRequiredUuid(id, 'id');
   return client.get<ConsumeChainResponseDTORaw>(`/consume-chains/${encodeURIComponent(id)}`);
 }
 
@@ -146,6 +150,7 @@ export async function getConsumeChainByMountedTransaction(
   mountedTransactionId: string,
   pagination?: PageQuery,
 ): Promise<ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>> {
+  validateRequiredUuid(mountedTransactionId, 'mountedTransactionId');
   return queryConsumeChains(client, { mountedTransactionId }, pagination);
 }
 
@@ -154,7 +159,7 @@ export async function getConsumeChainByStart(
   startId: string,
   query?: boolean | ConsumeChainQuery,
 ): Promise<ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>> {
-  validateUuid(startId, 'startId');
+  validateRequiredUuid(startId, 'startId');
   validateConsumeChainConvenienceQuery(query);
   const params = consumeChainQueryParams('startId', startId, query);
   validateConsumeChainFilters(params as ConsumeChainQueryFilters);
@@ -169,7 +174,7 @@ export async function getConsumeChainByEnd(
   endId: string,
   query?: boolean | ConsumeChainQuery,
 ): Promise<ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>> {
-  validateUuid(endId, 'endId');
+  validateRequiredUuid(endId, 'endId');
   validateConsumeChainConvenienceQuery(query);
   const params = consumeChainQueryParams('endId', endId, query);
   validateConsumeChainFilters(params as ConsumeChainQueryFilters);
@@ -184,7 +189,7 @@ export async function getConsumeChainByNode(
   nodeId: string,
   query?: boolean | ConsumeChainQuery,
 ): Promise<ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>> {
-  validateUuid(nodeId, 'nodeId');
+  validateRequiredUuid(nodeId, 'nodeId');
   validateConsumeChainConvenienceQuery(query);
   const params = consumeChainQueryParams('nodeId', nodeId, query);
   validateConsumeChainFilters(params as ConsumeChainQueryFilters);

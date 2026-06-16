@@ -1,5 +1,10 @@
 import { ApiClient, ApiResponse } from './client';
-import { validateCompressedPubkey, validatePageQuery, validateUuid } from './query-validation';
+import {
+  validateCompressedPubkey,
+  validatePageQuery,
+  validateRequiredCompressedPubkey,
+  validateRequiredUuid,
+} from './query-validation';
 import type { FlowNodeRegisterMsgRaw, PageQuery, SliceResponseDTO } from './types';
 
 export type FlowNodeRegisterMsgResponse = ApiResponse<FlowNodeRegisterMsgRaw>;
@@ -20,7 +25,7 @@ export async function getFlowNodeRegisterMsgById(
   client: ApiClient,
   id: string,
 ): Promise<ApiResponse<FlowNodeRegisterMsgRaw>> {
-  validateUuid(id, 'id');
+  validateRequiredUuid(id, 'id');
   return client.get<FlowNodeRegisterMsgRaw>(`/flow-node-registrations/${encodeURIComponent(id)}`);
 }
 
@@ -41,5 +46,6 @@ export async function getFlowNodeRegisterMsgByFlowNodePubkey(
   flowNodePubkey: string,
   pagination?: PageQuery,
 ): Promise<ApiResponse<SliceResponseDTO<FlowNodeRegisterMsgRaw>>> {
+  validateRequiredCompressedPubkey(flowNodePubkey, 'flowNodePubkey');
   return listFlowNodeRegisterMsgs(client, { flowNodePubkey, ...pagination });
 }

@@ -1,5 +1,10 @@
 import { ApiClient, ApiResponse } from './client';
-import { validateCompressedPubkey, validatePageQuery, validateUuid } from './query-validation';
+import {
+  validateCompressedPubkey,
+  validatePageQuery,
+  validateRequiredCompressedPubkey,
+  validateRequiredUuid,
+} from './query-validation';
 import type { CentralPubkeyEmpowerMsgRaw, PageQuery, SliceResponseDTO } from './types';
 
 export type CentralPubkeyEmpowerMsgResponse = ApiResponse<CentralPubkeyEmpowerMsgRaw>;
@@ -20,7 +25,7 @@ export async function getCentralPubkeyEmpowerMsgById(
   client: ApiClient,
   id: string,
 ): Promise<ApiResponse<CentralPubkeyEmpowerMsgRaw>> {
-  validateUuid(id, 'id');
+  validateRequiredUuid(id, 'id');
   return client.get<CentralPubkeyEmpowerMsgRaw>(`/central-pubkey-empowerments/${encodeURIComponent(id)}`);
 }
 
@@ -41,5 +46,6 @@ export async function getCentralPubkeyEmpowerMsgByFlowNodePubkey(
   flowNodePubkey: string,
   pagination?: PageQuery,
 ): Promise<ApiResponse<SliceResponseDTO<CentralPubkeyEmpowerMsgRaw>>> {
+  validateRequiredCompressedPubkey(flowNodePubkey, 'flowNodePubkey');
   return listCentralPubkeyEmpowerMsgs(client, { flowNodePubkey, ...pagination });
 }

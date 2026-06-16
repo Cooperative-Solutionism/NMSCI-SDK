@@ -2,6 +2,8 @@ import { ApiClient, ApiResponse } from './client';
 import {
   validateCompressedPubkey,
   validatePageQuery,
+  validateRequiredCompressedPubkey,
+  validateRequiredUuid,
   validateTimeRange,
   validateUuid,
 } from './query-validation';
@@ -49,7 +51,7 @@ export async function getTransactionMountMsgById(
   client: ApiClient,
   id: string,
 ): Promise<ApiResponse<TransactionMountMsgRaw>> {
-  validateUuid(id, 'id');
+  validateRequiredUuid(id, 'id');
   return client.get<TransactionMountMsgRaw>(`/transaction-mounts/${encodeURIComponent(id)}`);
 }
 
@@ -76,6 +78,7 @@ export async function getTransactionMountMsgByMountedTransactionRecordId(
   mountedTransactionRecordId: string,
   pagination?: PageQuery,
 ): Promise<ApiResponse<SliceResponseDTO<TransactionMountMsgRaw>>> {
+  validateRequiredUuid(mountedTransactionRecordId, 'mountedTransactionRecordId');
   return searchTransactionMountMsgs(client, { mountedTransactionRecordId }, pagination);
 }
 
@@ -84,6 +87,7 @@ export async function getTransactionMountMsgByConsumeNodePubkey(
   consumeNodePubkey: string,
   pagination?: PageQuery,
 ): Promise<ApiResponse<SliceResponseDTO<TransactionMountMsgRaw>>> {
+  validateRequiredCompressedPubkey(consumeNodePubkey, 'consumeNodePubkey');
   return searchTransactionMountMsgs(client, { consumeNodePubkey }, pagination);
 }
 
@@ -92,6 +96,7 @@ export async function getTransactionMountMsgByFlowNodePubkey(
   flowNodePubkey: string,
   pagination?: PageQuery,
 ): Promise<ApiResponse<SliceResponseDTO<TransactionMountMsgRaw>>> {
+  validateRequiredCompressedPubkey(flowNodePubkey, 'flowNodePubkey');
   return searchTransactionMountMsgs(client, { flowNodePubkey }, pagination);
 }
 
@@ -101,5 +106,7 @@ export async function getTransactionMountMsgByBothPubkeys(
   flowNodePubkey: string,
   pagination?: PageQuery,
 ): Promise<ApiResponse<SliceResponseDTO<TransactionMountMsgRaw>>> {
+  validateRequiredCompressedPubkey(consumeNodePubkey, 'consumeNodePubkey');
+  validateRequiredCompressedPubkey(flowNodePubkey, 'flowNodePubkey');
   return searchTransactionMountMsgs(client, { consumeNodePubkey, flowNodePubkey }, pagination);
 }

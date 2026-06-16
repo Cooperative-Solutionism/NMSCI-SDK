@@ -1,5 +1,5 @@
 import { ApiClient, ApiResponse } from './client';
-import { validateCompressedPubkey, validatePageQuery, validateUuid } from './query-validation';
+import { validatePageQuery, validateRequiredCompressedPubkey, validateRequiredUuid } from './query-validation';
 import type { FlowNodeLockedMsgRaw, LockedMessageResponseDTO, PageQuery, SliceResponseDTO } from './types';
 
 export type FlowNodeLockedMsgResponse = ApiResponse<FlowNodeLockedMsgRaw>;
@@ -17,7 +17,7 @@ export async function getFlowNodeLockedMsgById(
   client: ApiClient,
   id: string,
 ): Promise<ApiResponse<FlowNodeLockedMsgRaw>> {
-  validateUuid(id, 'id');
+  validateRequiredUuid(id, 'id');
   return client.get<FlowNodeLockedMsgRaw>(`/flow-node-locks/${encodeURIComponent(id)}`);
 }
 
@@ -36,7 +36,7 @@ export async function getFlowNodeLockedMsgByFlowNodePubkey(
   client: ApiClient,
   flowNodePubkey: string,
 ): Promise<ApiResponse<LockedMessageResponseDTO<FlowNodeLockedMsgRaw>>> {
-  validateCompressedPubkey(flowNodePubkey, 'flowNodePubkey');
+  validateRequiredCompressedPubkey(flowNodePubkey, 'flowNodePubkey');
   return client.get<LockedMessageResponseDTO<FlowNodeLockedMsgRaw>>('/flow-node-locks/status', {
     flowNodePubkey,
   });

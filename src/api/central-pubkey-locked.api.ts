@@ -1,5 +1,5 @@
 import { ApiClient, ApiResponse } from './client';
-import { validateCompressedPubkey, validatePageQuery, validateUuid } from './query-validation';
+import { validatePageQuery, validateRequiredCompressedPubkey, validateRequiredUuid } from './query-validation';
 import type { CentralPubkeyLockedMsgRaw, LockedMessageResponseDTO, PageQuery, SliceResponseDTO } from './types';
 
 export type CentralPubkeyLockedMsgResponse = ApiResponse<CentralPubkeyLockedMsgRaw>;
@@ -17,7 +17,7 @@ export async function getCentralPubkeyLockedMsgById(
   client: ApiClient,
   id: string,
 ): Promise<ApiResponse<CentralPubkeyLockedMsgRaw>> {
-  validateUuid(id, 'id');
+  validateRequiredUuid(id, 'id');
   return client.get<CentralPubkeyLockedMsgRaw>(`/central-pubkey-locks/${encodeURIComponent(id)}`);
 }
 
@@ -36,7 +36,7 @@ export async function getCentralPubkeyLockedMsgByCentralPubkey(
   client: ApiClient,
   centralPubkey: string,
 ): Promise<ApiResponse<LockedMessageResponseDTO<CentralPubkeyLockedMsgRaw>>> {
-  validateCompressedPubkey(centralPubkey, 'centralPubkey');
+  validateRequiredCompressedPubkey(centralPubkey, 'centralPubkey');
   return client.get<LockedMessageResponseDTO<CentralPubkeyLockedMsgRaw>>('/central-pubkey-locks/status', {
     centralPubkey,
   });

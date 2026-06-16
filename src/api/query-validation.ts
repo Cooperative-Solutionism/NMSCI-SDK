@@ -22,6 +22,12 @@ export function validateUuid(value: string | undefined, fieldName: string): void
   }
 }
 
+export function validateRequiredUuid(value: string | undefined, fieldName: string): void {
+  if (value === undefined || !UUID_PATTERN.test(value)) {
+    throw new Error(`${fieldName} must be a UUID string`);
+  }
+}
+
 export function validateHexString(value: string | undefined, fieldName: string, expectedBytes?: number): void {
   if (value === undefined) {
     return;
@@ -36,9 +42,39 @@ export function validateHexString(value: string | undefined, fieldName: string, 
   }
 }
 
+export function validateRequiredHexString(
+  value: string | undefined,
+  fieldName: string,
+  expectedBytes?: number,
+): void {
+  if (value === undefined) {
+    if (expectedBytes !== undefined) {
+      throw new Error(`${fieldName} must be a ${expectedBytes}-byte hex string`);
+    }
+    throw new Error(`${fieldName} must be a hex string`);
+  }
+
+  validateHexString(value, fieldName, expectedBytes);
+}
+
 export function validateCompressedPubkey(value: string | undefined, fieldName: string): void {
   if (value !== undefined && !COMPRESSED_PUBKEY_PATTERN.test(value)) {
     throw new Error(`${fieldName} must be a 33-byte compressed public key hex string`);
+  }
+}
+
+export function validateRequiredCompressedPubkey(value: string | undefined, fieldName: string): void {
+  if (value === undefined || !COMPRESSED_PUBKEY_PATTERN.test(value)) {
+    throw new Error(`${fieldName} must be a 33-byte compressed public key hex string`);
+  }
+}
+
+export function validateRequiredParams<T>(
+  params: T | undefined | null,
+  context: string,
+): asserts params is NonNullable<T> {
+  if (params === undefined || params === null) {
+    throw new Error(`${context} parameters are required`);
   }
 }
 

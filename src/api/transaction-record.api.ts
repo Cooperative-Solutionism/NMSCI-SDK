@@ -2,8 +2,9 @@ import { ApiClient, ApiResponse } from './client';
 import {
   validateCompressedPubkey,
   validatePageQuery,
+  validateRequiredCompressedPubkey,
+  validateRequiredUuid,
   validateTimeRange,
-  validateUuid,
 } from './query-validation';
 import type { PageQuery, SliceResponseDTO, TransactionRecordMsgRaw } from './types';
 
@@ -48,7 +49,7 @@ export async function getTransactionRecordMsgById(
   client: ApiClient,
   id: string,
 ): Promise<ApiResponse<TransactionRecordMsgRaw>> {
-  validateUuid(id, 'id');
+  validateRequiredUuid(id, 'id');
   return client.get<TransactionRecordMsgRaw>(`/transaction-records/${encodeURIComponent(id)}`);
 }
 
@@ -71,6 +72,7 @@ export async function getTransactionRecordMsgByConsumeNodePubkey(
   consumeNodePubkey: string,
   pagination?: PageQuery,
 ): Promise<ApiResponse<SliceResponseDTO<TransactionRecordMsgRaw>>> {
+  validateRequiredCompressedPubkey(consumeNodePubkey, 'consumeNodePubkey');
   return searchTransactionRecordMsgs(client, { consumeNodePubkey }, pagination);
 }
 
@@ -79,6 +81,7 @@ export async function getTransactionRecordMsgByFlowNodePubkey(
   flowNodePubkey: string,
   pagination?: PageQuery,
 ): Promise<ApiResponse<SliceResponseDTO<TransactionRecordMsgRaw>>> {
+  validateRequiredCompressedPubkey(flowNodePubkey, 'flowNodePubkey');
   return searchTransactionRecordMsgs(client, { flowNodePubkey }, pagination);
 }
 
@@ -88,5 +91,7 @@ export async function getTransactionRecordMsgByBothPubkeys(
   flowNodePubkey: string,
   pagination?: PageQuery,
 ): Promise<ApiResponse<SliceResponseDTO<TransactionRecordMsgRaw>>> {
+  validateRequiredCompressedPubkey(consumeNodePubkey, 'consumeNodePubkey');
+  validateRequiredCompressedPubkey(flowNodePubkey, 'flowNodePubkey');
   return searchTransactionRecordMsgs(client, { consumeNodePubkey, flowNodePubkey }, pagination);
 }

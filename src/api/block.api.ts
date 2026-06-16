@@ -1,5 +1,5 @@
 import { ApiClient, ApiResponse } from './client';
-import { validateHexString } from './query-validation';
+import { validateRequiredHexString } from './query-validation';
 import type { BlockInfoRaw } from './types';
 
 export type BlockInfoResponse = ApiResponse<BlockInfoRaw>;
@@ -13,6 +13,6 @@ export async function getBlockByHeight(client: ApiClient, height: number): Promi
 }
 
 export async function getBlockByHash(client: ApiClient, hash: string): Promise<ApiResponse<BlockInfoRaw>> {
-  validateHexString(hash, 'hash', 32);
+  validateRequiredHexString(hash, 'hash', 32);
   return client.get<BlockInfoRaw>('/blocks', { hash });
 }

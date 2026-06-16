@@ -2,6 +2,9 @@ import { ApiClient, ApiResponse, type QueryParams } from './client';
 import {
   validateCompressedPubkey,
   validateNoIdPubkeyMix,
+  validateRequiredCompressedPubkey,
+  validateRequiredParams,
+  validateRequiredUuid,
   validateTimeRange,
   validateUuid,
 } from './query-validation';
@@ -23,6 +26,7 @@ export async function getReturningFlowRateById(
     currencyType?: number;
   },
 ): Promise<ApiResponse<ReturningFlowRateResponseDTORaw>> {
+  validateRequiredParams(params, 'returning-flow-rates');
   const mode = validateNoIdPubkeyMix(
     params as Record<string, unknown>,
     ['targetId', 'sourceId'],
@@ -32,10 +36,7 @@ export async function getReturningFlowRateById(
   if (mode === 'pubkey') {
     throw new Error('returning-flow-rates cannot mix id and pubkey query parameters');
   }
-  if (params.targetId === undefined) {
-    throw new Error('targetId must be a UUID string');
-  }
-  validateUuid(params.targetId, 'targetId');
+  validateRequiredUuid(params.targetId, 'targetId');
   validateUuid(params.sourceId, 'sourceId');
   validateTimeRange(params.startTime, params.endTime, 'returning-flow-rates');
   const query: QueryParams = { targetId: params.targetId };
@@ -60,6 +61,7 @@ export async function getReturningFlowRateByPubkey(
     currencyType?: number;
   },
 ): Promise<ApiResponse<ReturningFlowRateResponseDTORaw>> {
+  validateRequiredParams(params, 'returning-flow-rates');
   const mode = validateNoIdPubkeyMix(
     params as Record<string, unknown>,
     ['targetId', 'sourceId'],
@@ -69,10 +71,7 @@ export async function getReturningFlowRateByPubkey(
   if (mode === 'id') {
     throw new Error('returning-flow-rates cannot mix id and pubkey query parameters');
   }
-  if (params.targetPubkey === undefined) {
-    throw new Error('targetPubkey must be a 33-byte compressed public key hex string');
-  }
-  validateCompressedPubkey(params.targetPubkey, 'targetPubkey');
+  validateRequiredCompressedPubkey(params.targetPubkey, 'targetPubkey');
   validateCompressedPubkey(params.sourcePubkey, 'sourcePubkey');
   validateTimeRange(params.startTime, params.endTime, 'returning-flow-rates');
   const query: QueryParams = { targetPubkey: params.targetPubkey };

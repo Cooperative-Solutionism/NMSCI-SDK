@@ -157,6 +157,19 @@ describe('consume-chain query validation', () => {
     );
   });
 
+  it('rejects undefined consume-chain required inputs before calling fetch', async () => {
+    const counted = createCountingClient();
+
+    await expect(getConsumeChainById(counted.client, undefined as never)).rejects.toThrow(
+      /id must be a UUID string/,
+    );
+    await expect(getConsumeChainEdges(counted.client, undefined as never)).rejects.toThrow(
+      /consume-chains\/edges parameters are required/,
+    );
+
+    expect(counted.fetchCount()).toBe(0);
+  });
+
   it('rejects id and pubkey mode mixing in consume-chain root queries', async () => {
     await expect(queryConsumeChains(client, { startId: uuidA, endPubkey: pubkeyA })).rejects.toThrow(
       /consume-chains cannot mix id and pubkey query parameters/,
@@ -239,6 +252,19 @@ describe('returning-flow-rate query validation', () => {
     );
   });
 
+  it('rejects undefined returning-flow-rate parameter objects before calling fetch', async () => {
+    const counted = createCountingClient();
+
+    await expect(getReturningFlowRateById(counted.client, undefined as never)).rejects.toThrow(
+      /returning-flow-rates parameters are required/,
+    );
+    await expect(getReturningFlowRateByPubkey(counted.client, undefined as never)).rejects.toThrow(
+      /returning-flow-rates parameters are required/,
+    );
+
+    expect(counted.fetchCount()).toBe(0);
+  });
+
   it('rejects returning-flow-rate source-only requests without calling fetch', async () => {
     const counted = createCountingClient();
 
@@ -300,6 +326,25 @@ describe('remaining API helper query validation', () => {
     await expect(getTransactionRecordMsgByFlowNodePubkey(client, 'bad-pubkey')).rejects.toThrow(
       /flowNodePubkey must be a 33-byte compressed public key hex string/,
     );
+  });
+
+  it('rejects undefined required helper arguments before calling fetch', async () => {
+    const counted = createCountingClient();
+
+    await expect(getFlowNodeState(counted.client, undefined as never)).rejects.toThrow(
+      /flowNodePubkey must be a 33-byte compressed public key hex string/,
+    );
+    await expect(
+      getTransactionRecordMsgByFlowNodePubkey(counted.client, undefined as never),
+    ).rejects.toThrow(/flowNodePubkey must be a 33-byte compressed public key hex string/);
+    await expect(
+      getTransactionMountMsgByMountedTransactionRecordId(counted.client, undefined as never),
+    ).rejects.toThrow(/mountedTransactionRecordId must be a UUID string/);
+    await expect(getBlockByHash(counted.client, undefined as never)).rejects.toThrow(
+      /hash must be a 32-byte hex string/,
+    );
+
+    expect(counted.fetchCount()).toBe(0);
   });
 
   it('rejects invalid pagination in remaining list and search helpers', async () => {

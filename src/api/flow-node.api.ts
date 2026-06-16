@@ -1,5 +1,5 @@
 import { ApiClient, ApiResponse } from './client';
-import { validateCompressedPubkey, validatePageQuery } from './query-validation';
+import { validatePageQuery, validateRequiredCompressedPubkey } from './query-validation';
 import type { FlowNodeListItemDTORaw, FlowNodeStateResponseDTO, PageQuery, SliceResponseDTO } from './types';
 
 export type FlowNodeStateResponse = ApiResponse<FlowNodeStateResponseDTO>;
@@ -15,7 +15,7 @@ export async function getFlowNodeState(
   client: ApiClient,
   flowNodePubkey: string,
 ): Promise<ApiResponse<FlowNodeStateResponseDTO>> {
-  validateCompressedPubkey(flowNodePubkey, 'flowNodePubkey');
+  validateRequiredCompressedPubkey(flowNodePubkey, 'flowNodePubkey');
   return client.get<FlowNodeStateResponseDTO>(`/flow-nodes/${encodeURIComponent(flowNodePubkey)}`);
 }
 
