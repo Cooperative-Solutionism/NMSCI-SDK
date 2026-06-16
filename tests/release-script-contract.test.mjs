@@ -15,6 +15,12 @@ function expectInOrder(source, snippets) {
   }
 }
 
+function expectNotContains(source, snippets) {
+  for (const snippet of snippets) {
+    expect(source, `Forbidden snippet: ${snippet}`).not.toContain(snippet);
+  }
+}
+
 describe('release and CI command contracts', () => {
   it('runs the full local release quality gate before version bump', () => {
     expectInOrder(releaseScript, [
@@ -36,15 +42,26 @@ describe('release and CI command contracts', () => {
       "run('npm run build')",
       "step('打包冒烟测试 / Pack smoke')",
       "run('npm run test:pack:prepared')",
+      "run(`npm publish --access public --dry-run${distTagArg}`)",
+    ]);
+    expectInOrder(releaseScript, [
+      "run('npm run test:pack:prepared')",
       "step('发布到 npm / npm publish')",
+      "run(`npm publish --access public${distTagArg}${otpArg}`)",
     ]);
   });
 
   it('keeps CI validation-only and avoids duplicate build work', () => {
     expect(normalizedCiWorkflow).toContain("on:\n  push:\n    branches:\n      - '**'\n  pull_request:");
     expect(normalizedCiWorkflow).not.toMatch(/^\s*tags(?:-ignore)?:/m);
-    expect(ciWorkflow).not.toContain('id-token: write');
-    expect(ciWorkflow).not.toContain('npm publish');
+    expectNotContains(ciWorkflow, [
+      'NODE_AUTH_TOKEN',
+      'NPM_TOKEN',
+      '--provenance',
+      'provenance',
+      'npm publish',
+      'id-token: write',
+    ]);
     expectInOrder(ciWorkflow, [
       'run: npm run test:encoding',
       'run: npm run typecheck',
