@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 const textFilePattern = /\.(?:md|ts|tsx|js|mjs|json|ya?ml)$/u;
@@ -30,7 +30,8 @@ export function getTrackedTextFiles() {
   return execFileSync('git', ['ls-files'], { encoding: 'utf8' })
     .split(/\r?\n/u)
     .filter(Boolean)
-    .filter(file => textFilePattern.test(file));
+    .filter(file => textFilePattern.test(file))
+    .filter(file => existsSync(file));
 }
 
 function getLineColumn(text, index) {

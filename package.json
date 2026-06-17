@@ -61,7 +61,7 @@
   },
   "sideEffects": false,
   "dependencies": {
-    "elliptic": "^6.6.1"
+    "@noble/secp256k1": "^2.3.0"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

@@ -80,6 +80,20 @@ for (const entry of entries) {
     throw new Error(\`ESM import produced an empty module for \${entry}\`);
   }
 }
+
+const { getPublicKeyFromPrivate, signData, toHex, validateSignatureLowS, verifySignature } = await import('@nmsci/sdk');
+const privateKey = '01'.padStart(64, '0');
+const publicKey = getPublicKeyFromPrivate(privateKey);
+const signature = await signData(new Uint8Array([1, 2, 3, 4]), privateKey);
+if (publicKey !== '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798') {
+  throw new Error('ESM crypto smoke failed to derive the expected public key');
+}
+if (signature.length !== 64 || !validateSignatureLowS(toHex(signature)).isValid) {
+  throw new Error('ESM crypto smoke failed to produce a canonical compact signature');
+}
+if (!(await verifySignature(new Uint8Array([1, 2, 3, 4]), signature, publicKey))) {
+  throw new Error('ESM crypto smoke failed to verify the generated signature');
+}
 `);
 
     writeFileSync(join(tempDir, 'cjs-smoke.cjs'), `
@@ -90,6 +104,22 @@ for (const entry of entries) {
     throw new Error(\`CJS require produced an empty module for \${entry}\`);
   }
 }
+
+(async () => {
+  const { getPublicKeyFromPrivate, signData, toHex, validateSignatureLowS, verifySignature } = require('@nmsci/sdk');
+  const privateKey = '01'.padStart(64, '0');
+  const publicKey = getPublicKeyFromPrivate(privateKey);
+  const signature = await signData(new Uint8Array([1, 2, 3, 4]), privateKey);
+  if (publicKey !== '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798') {
+    throw new Error('CJS crypto smoke failed to derive the expected public key');
+  }
+  if (signature.length !== 64 || !validateSignatureLowS(toHex(signature)).isValid) {
+    throw new Error('CJS crypto smoke failed to produce a canonical compact signature');
+  }
+  if (!(await verifySignature(new Uint8Array([1, 2, 3, 4]), signature, publicKey))) {
+    throw new Error('CJS crypto smoke failed to verify the generated signature');
+  }
+})();
 `);
 
     execFileSync(process.execPath, [join(tempDir, 'esm-smoke.mjs')], { cwd: tempDir, stdio: 'inherit' });

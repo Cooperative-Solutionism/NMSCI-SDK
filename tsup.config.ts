@@ -12,5 +12,5 @@ export default defineConfig({
   splitting: false,
   sourcemap: true,
   clean: true,
-  noExternal: ['elliptic'],
+  noExternal: ['@noble/secp256k1'],
 });

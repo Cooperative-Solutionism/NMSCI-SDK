@@ -26,9 +26,9 @@
 - Message collection-root helpers for documented slice-backed endpoints.
 - Grouped `.list(...)` helpers for message collections.
 - Runtime validation for clearly invalid SDK query inputs.
-- Packed-package smoke testing for public ESM and CommonJS entry points.
+- Packed-package smoke testing for public ESM and CommonJS entry points, including secp256k1 derive/sign/verify calls.
 
 ### Security and maintenance
 
 - Dev test tooling upgraded to remove high/critical audit findings.
-- `elliptic` remains the production secp256k1 implementation for compatibility; npm may report low severity advisory; replacing it requires separate compatibility project with signature, verification, Low-S, and protocol byte regression testing.
+- Production secp256k1 signing migrated from `elliptic` to `@noble/secp256k1`, removing the remaining `elliptic` audit finding while preserving compressed public keys, compact Low-S signatures, and double-SHA-256 sign/verify behavior.

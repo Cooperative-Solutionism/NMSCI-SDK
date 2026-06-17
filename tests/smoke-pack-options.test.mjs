@@ -41,4 +41,10 @@ describe('smoke-pack CLI options', () => {
       "['pack', '--ignore-scripts', '--json', '--pack-destination', tempDir]",
     );
   });
+
+  it('exercises packaged crypto APIs in both module formats', () => {
+    expect(smokePackScript).toContain('getPublicKeyFromPrivate');
+    expect(smokePackScript).toContain('signData');
+    expect(smokePackScript).toContain('verifySignature');
+  });
 });
