@@ -1,8 +1,9 @@
 import { MsgType } from './types';
 import type { Pubkey, Signature, UUID } from '../core/types';
-import { concat, nBitsToBytes, signatureToBytes, uuidToBytes, toBytesBigEndian, pubkeyToBytes, toHex } from '../core/encoding';
+import { concat, toBytesBigEndian, toHex } from '../core/encoding';
 import { signData } from '../core/crypto';
 import { MSG_SPECS } from '../protocol/spec';
+import { nBitsField, optionalSignatureField, pubkeyField, uintNumberField, uuidField } from './validation';
 
 /** 123-byte Flow Node Register message */
 export interface FlowNodeRegisterMessage {
@@ -19,15 +20,15 @@ export interface FlowNodeRegisterMessage {
  * If flowNodeSignature is omitted, the last 64 bytes are zeroed.
  */
 export function serializeFlowNodeRegister(msg: FlowNodeRegisterMessage): Uint8Array {
-  const difficultyBytes = nBitsToBytes(msg.registerDifficultyTarget);
-  const signature = msg.flowNodeSignature ? signatureToBytes(msg.flowNodeSignature) : new Uint8Array(64);
+  const difficultyBytes = nBitsField(msg.registerDifficultyTarget, 'registerDifficultyTarget');
+  const signature = optionalSignatureField(msg.flowNodeSignature, 'flowNodeSignature');
 
   return concat(
     toBytesBigEndian(MsgType.FLOW_NODE_REGISTRATION, 2), // 2 bytes
-    uuidToBytes(msg.uuid),                                  // 16 bytes
+    uuidField(msg.uuid, 'uuid'),                           // 16 bytes
     difficultyBytes,                                         // 4 bytes
-    toBytesBigEndian(msg.nonce, 4),                         // 4 bytes
-    pubkeyToBytes(msg.flowNodePubkey),                     // 33 bytes
+    uintNumberField(msg.nonce, 4, 'nonce'),                 // 4 bytes
+    pubkeyField(msg.flowNodePubkey, 'flowNodePubkey'),      // 33 bytes
     signature,                                              // 64 bytes
   );
 }
@@ -47,10 +48,10 @@ export function buildFlowNodeRegisterPayload(params: {
 }): Uint8Array {
   return concat(
     toBytesBigEndian(MsgType.FLOW_NODE_REGISTRATION, 2),
-    uuidToBytes(params.uuid),
-    nBitsToBytes(params.registerDifficultyTarget),
-    toBytesBigEndian(params.nonce, 4),
-    pubkeyToBytes(params.flowNodePubkey),
+    uuidField(params.uuid, 'uuid'),
+    nBitsField(params.registerDifficultyTarget, 'registerDifficultyTarget'),
+    uintNumberField(params.nonce, 4, 'nonce'),
+    pubkeyField(params.flowNodePubkey, 'flowNodePubkey'),
   );
 }
 

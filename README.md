@@ -39,7 +39,8 @@ yarn add @nmsci/sdk
 pnpm add @nmsci/sdk
 ```
 
-> **前置要求**：Node.js >= 18（需要 `crypto.subtle` API），或任何现代浏览器环境。
+> 运行时支持：Node.js >= 18，或任何现代浏览器环境。Node 18 会在缺少全局 Web Crypto 时回退到 `node:crypto.webcrypto`。
+> 开发/测试工具链：Node.js 20.19+ 或 22.12+。Vitest/Vite 需要更高 Node 版本；Node 18 仅执行构建后 pack 运行时冒烟测试。
 
 ---
 
@@ -1061,6 +1062,8 @@ const block = await safeApiCall(() => client.get('/blocks/latest'));
 ---
 
 ## 开发与校验
+
+完整本地校验请使用 Node.js 20.19+ 或 22.12+；Node 18 仅执行构建后 pack 运行时冒烟测试，用于确认发布包在运行时可导入和执行。
 
 本地提交前建议按 CI 同序执行：
 

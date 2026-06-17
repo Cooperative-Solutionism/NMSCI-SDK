@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const releaseScript = readFileSync('scripts/release.mjs', 'utf8');
 const ciWorkflow = readFileSync('.github/workflows/ci.yml', 'utf8');
+const readme = readFileSync('README.md', 'utf8');
 const normalizedCiWorkflow = ciWorkflow.replace(/\r\n/g, '\n');
 const workflowSources = readdirSync('.github/workflows')
   .filter((file) => /\.ya?ml$/i.test(file))
@@ -90,5 +91,11 @@ describe('release and CI command contracts', () => {
       'run: npm run build',
       'run: npm run test:pack:prepared',
     ]);
+  });
+
+  it('documents runtime and development Node.js support separately', () => {
+    expect(readme).toContain('运行时支持：Node.js >= 18');
+    expect(readme).toContain('开发/测试工具链：Node.js 20.19+ 或 22.12+');
+    expect(readme).toContain('Node 18 仅执行构建后 pack 运行时冒烟测试');
   });
 });

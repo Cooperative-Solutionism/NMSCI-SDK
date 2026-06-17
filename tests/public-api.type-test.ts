@@ -8,6 +8,8 @@ import {
   type ApiResponse,
   type BlockInfo,
   type BlockInfoRaw,
+  type CentralPubkeyEmpowerMsg,
+  type CentralPubkeyLockedMsg,
   type ConsumeChainEdge,
   type ConsumeChainEdgeListResponse,
   type ConsumeChainEdgeQuery,
@@ -16,6 +18,10 @@ import {
   type LockedMessageResponseDTO,
   type ReturningFlowRateResponse,
   type SliceResponseDTO,
+  type StorageStatusDTO,
+  type SystemParamsDTO,
+  type SystemStatusDTO,
+  type TransactionMountMsg,
   type TransactionRecordMsg,
 } from '../src';
 
@@ -65,11 +71,29 @@ expectTypeOf<ReturnType<typeof sdk.normalized.block.getLast>>().toEqualTypeOf<Pr
 expectTypeOf<ReturnType<typeof sdk.normalized.transactionRecord.search>>().toEqualTypeOf<
   Promise<ApiResponse<SliceResponseDTO<TransactionRecordMsg>>>
 >();
+expectTypeOf<ReturnType<typeof sdk.normalized.transactionMount.search>>().toEqualTypeOf<
+  Promise<ApiResponse<SliceResponseDTO<TransactionMountMsg>>>
+>();
 expectTypeOf<ReturnType<typeof sdk.normalized.consumeChain.getEdges>>().toEqualTypeOf<
   Promise<ApiResponse<SliceResponseDTO<ConsumeChainEdge>>>
 >();
+expectTypeOf<ReturnType<typeof sdk.normalized.centralPubkeyEmpower.list>>().toEqualTypeOf<
+  Promise<ApiResponse<SliceResponseDTO<CentralPubkeyEmpowerMsg>>>
+>();
+expectTypeOf<ReturnType<typeof sdk.normalized.centralPubkeyLocked.getByCentralPubkey>>().toEqualTypeOf<
+  Promise<ApiResponse<LockedMessageResponseDTO<CentralPubkeyLockedMsg>>>
+>();
 expectTypeOf<ReturnType<typeof sdk.normalized.flowNodeLocked.getByFlowNodePubkey>>().toEqualTypeOf<
   Promise<ApiResponse<LockedMessageResponseDTO<FlowNodeLockedMsg>>>
+>();
+expectTypeOf<ReturnType<typeof sdk.normalized.system.getParams>>().toEqualTypeOf<
+  Promise<ApiResponse<SystemParamsDTO>>
+>();
+expectTypeOf<ReturnType<typeof sdk.normalized.system.getStatus>>().toEqualTypeOf<
+  Promise<ApiResponse<SystemStatusDTO>>
+>();
+expectTypeOf<ReturnType<typeof sdk.normalized.system.getStorage>>().toEqualTypeOf<
+  Promise<ApiResponse<StorageStatusDTO>>
 >();
 
 // @ts-expect-error targetId or targetPubkey is required.

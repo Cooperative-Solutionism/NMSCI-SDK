@@ -1,8 +1,16 @@
 import { MsgType } from './types';
 import type { Pubkey, Signature, UUID } from '../core/types';
-import { concat, signatureToBytes, uuidToBytes, toBytesBigEndian, pubkeyToBytes, toHex } from '../core/encoding';
+import { concat, toBytesBigEndian, toHex } from '../core/encoding';
 import { signData } from '../core/crypto';
 import { MSG_SPECS } from '../protocol/spec';
+import {
+  optionalSignatureField,
+  optionalUint64BigIntField,
+  pubkeyField,
+  signatureField,
+  uint64BigIntField,
+  uuidField,
+} from './validation';
 
 /** 220-byte Flow Node Locked message (协议定义为220字节) */
 export interface FlowNodeLockedMessage {
@@ -19,17 +27,15 @@ export interface FlowNodeLockedMessage {
  * Build the 220-byte serialized form.
  */
 export function serializeFlowNodeLocked(msg: FlowNodeLockedMessage): Uint8Array {
-  const flowSig = msg.flowNodeSignature ? signatureToBytes(msg.flowNodeSignature) : new Uint8Array(64);
-  const timestamp = msg.confirmTimestamp != null
-    ? toBytesBigEndian(msg.confirmTimestamp, 8)
-    : new Uint8Array(8);
-  const centralSig = msg.centralSignature ? signatureToBytes(msg.centralSignature) : new Uint8Array(64);
+  const flowSig = optionalSignatureField(msg.flowNodeSignature, 'flowNodeSignature');
+  const timestamp = optionalUint64BigIntField(msg.confirmTimestamp, 'confirmTimestamp');
+  const centralSig = optionalSignatureField(msg.centralSignature, 'centralSignature');
 
   return concat(
     toBytesBigEndian(MsgType.FLOW_NODE_FREEZE, 2), // 2 bytes
-    uuidToBytes(msg.uuid),                          // 16 bytes
-    pubkeyToBytes(msg.flowNodePubkey),              // 33 bytes
-    pubkeyToBytes(msg.centralPubkey),               // 33 bytes
+    uuidField(msg.uuid, 'uuid'),                    // 16 bytes
+    pubkeyField(msg.flowNodePubkey, 'flowNodePubkey'), // 33 bytes
+    pubkeyField(msg.centralPubkey, 'centralPubkey'), // 33 bytes
     flowSig,                                         // 64 bytes
     timestamp,                                       // 8 bytes
     centralSig,                                      // 64 bytes
@@ -43,7 +49,7 @@ export function serializeFlowNodeLockedSubmitPayload(
 ): Uint8Array {
   return concat(
     buildFlowNodeLockedPayload(msg),
-    signatureToBytes(msg.flowNodeSignature),
+    signatureField(msg.flowNodeSignature, 'flowNodeSignature'),
   );
 }
 
@@ -58,9 +64,9 @@ export function buildFlowNodeLockedPayload(params: {
 }): Uint8Array {
   return concat(
     toBytesBigEndian(MsgType.FLOW_NODE_FREEZE, 2),
-    uuidToBytes(params.uuid),
-    pubkeyToBytes(params.flowNodePubkey),
-    pubkeyToBytes(params.centralPubkey),
+    uuidField(params.uuid, 'uuid'),
+    pubkeyField(params.flowNodePubkey, 'flowNodePubkey'),
+    pubkeyField(params.centralPubkey, 'centralPubkey'),
   );
 }
 
@@ -89,10 +95,10 @@ export function buildFlowNodeLockedFullPayload(params: {
 }): Uint8Array {
   return concat(
     toBytesBigEndian(MsgType.FLOW_NODE_FREEZE, 2),
-    uuidToBytes(params.uuid),
-    pubkeyToBytes(params.flowNodePubkey),
-    pubkeyToBytes(params.centralPubkey),
-    signatureToBytes(params.flowNodeSignature),
-    toBytesBigEndian(params.confirmTimestamp, 8),
+    uuidField(params.uuid, 'uuid'),
+    pubkeyField(params.flowNodePubkey, 'flowNodePubkey'),
+    pubkeyField(params.centralPubkey, 'centralPubkey'),
+    signatureField(params.flowNodeSignature, 'flowNodeSignature'),
+    uint64BigIntField(params.confirmTimestamp, 'confirmTimestamp'),
   );
 }
