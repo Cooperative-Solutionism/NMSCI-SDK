@@ -1,0 +1,350 @@
+{
+  "contractVersion": 1,
+  "apiVersion": "3.0.0",
+  "source": {
+    "repository": "NMSCI",
+    "document": "docs/API.md"
+  },
+  "endpoints": [
+    {
+      "id": "blocks.getLatest",
+      "method": "GET",
+      "path": "/blocks/latest",
+      "envelope": "response-result",
+      "sdkFunctions": ["getLastBlock"],
+      "sdkGroups": ["block.getLast"]
+    },
+    {
+      "id": "blocks.getByHeight",
+      "method": "GET",
+      "path": "/blocks/{height}",
+      "envelope": "response-result",
+      "sdkFunctions": ["getBlockByHeight"],
+      "sdkGroups": ["block.getByHeight"]
+    },
+    {
+      "id": "blocks.getByHash",
+      "method": "GET",
+      "path": "/blocks?hash={hash}",
+      "envelope": "response-result",
+      "sdkFunctions": ["getBlockByHash"],
+      "sdkGroups": ["block.getByHash"]
+    },
+    {
+      "id": "system.getParams",
+      "method": "GET",
+      "path": "/system/params",
+      "envelope": "response-result",
+      "sdkFunctions": ["getSystemParams"],
+      "sdkGroups": ["system.getParams"]
+    },
+    {
+      "id": "system.getStatus",
+      "method": "GET",
+      "path": "/system/status",
+      "envelope": "response-result",
+      "sdkFunctions": ["getSystemStatus"],
+      "sdkGroups": ["system.getStatus"]
+    },
+    {
+      "id": "system.getStorage",
+      "method": "GET",
+      "path": "/system/storage",
+      "envelope": "response-result",
+      "sdkFunctions": ["getSystemStorage"],
+      "sdkGroups": ["system.getStorage"]
+    },
+    {
+      "id": "metadata.getMessageTypes",
+      "method": "GET",
+      "path": "/metadata/message-types",
+      "envelope": "response-result",
+      "sdkFunctions": ["getMessageTypes"],
+      "sdkGroups": ["metadata.getMessageTypes"]
+    },
+    {
+      "id": "metadata.getCurrencyTypes",
+      "method": "GET",
+      "path": "/metadata/currency-types",
+      "envelope": "response-result",
+      "sdkFunctions": ["getCurrencyTypes"],
+      "sdkGroups": ["metadata.getCurrencyTypes"]
+    },
+    {
+      "id": "metadata.getBlockFormat",
+      "method": "GET",
+      "path": "/metadata/block-format",
+      "envelope": "response-result",
+      "sdkFunctions": ["getBlockFormat"],
+      "sdkGroups": ["metadata.getBlockFormat"]
+    },
+    {
+      "id": "metadata.getDifficulty",
+      "method": "GET",
+      "path": "/metadata/difficulty",
+      "envelope": "response-result",
+      "sdkFunctions": ["getDifficulty"],
+      "sdkGroups": ["metadata.getDifficulty"]
+    },
+    {
+      "id": "flowNodes.getState",
+      "method": "GET",
+      "path": "/flow-nodes/{flowNodePubkey}",
+      "envelope": "response-result",
+      "sdkFunctions": ["getFlowNodeState"],
+      "sdkGroups": ["flowNode.getState"]
+    },
+    {
+      "id": "flowNodes.list",
+      "method": "GET",
+      "path": "/flow-nodes",
+      "envelope": "response-result",
+      "sdkFunctions": ["listFlowNodes"],
+      "sdkGroups": ["flowNode.list"]
+    },
+    {
+      "id": "consumeChains.getById",
+      "method": "GET",
+      "path": "/consume-chains/{id}",
+      "envelope": "response-result",
+      "sdkFunctions": ["getConsumeChainById"],
+      "sdkGroups": ["consumeChain.getById"]
+    },
+    {
+      "id": "consumeChains.query",
+      "method": "GET",
+      "path": "/consume-chains",
+      "envelope": "response-result",
+      "sdkFunctions": [
+        "queryConsumeChains",
+        "getConsumeChainByMountedTransaction",
+        "getConsumeChainByStart",
+        "getConsumeChainByEnd",
+        "getConsumeChainByNode"
+      ],
+      "sdkGroups": [
+        "consumeChain.query",
+        "consumeChain.getByMountedTransaction",
+        "consumeChain.getByStart",
+        "consumeChain.getByEnd",
+        "consumeChain.getByNode"
+      ]
+    },
+    {
+      "id": "consumeChains.getEdges",
+      "method": "GET",
+      "path": "/consume-chains/edges",
+      "envelope": "response-result",
+      "sdkFunctions": ["getConsumeChainEdges"],
+      "sdkGroups": ["consumeChain.getEdges"]
+    },
+    {
+      "id": "returningFlowRates.get",
+      "method": "GET",
+      "path": "/returning-flow-rates",
+      "envelope": "response-result",
+      "sdkFunctions": ["getReturningFlowRateById", "getReturningFlowRateByPubkey"],
+      "sdkGroups": ["returningFlowRate.getById", "returningFlowRate.getByPubkey"]
+    },
+    {
+      "id": "flowNodeRegistrations.create",
+      "method": "POST",
+      "path": "/flow-node-registrations",
+      "envelope": "response-result",
+      "sdkFunctions": ["sendFlowNodeRegisterMsg"],
+      "sdkGroups": ["flowNodeRegister.send"]
+    },
+    {
+      "id": "flowNodeRegistrations.getById",
+      "method": "GET",
+      "path": "/flow-node-registrations/{id}",
+      "envelope": "response-result",
+      "sdkFunctions": ["getFlowNodeRegisterMsgById"],
+      "sdkGroups": ["flowNodeRegister.getById"]
+    },
+    {
+      "id": "flowNodeRegistrations.list",
+      "method": "GET",
+      "path": "/flow-node-registrations",
+      "envelope": "response-result",
+      "sdkFunctions": ["listFlowNodeRegisterMsgs", "getFlowNodeRegisterMsgByFlowNodePubkey"],
+      "sdkGroups": ["flowNodeRegister.list", "flowNodeRegister.getByFlowNodePubkey"]
+    },
+    {
+      "id": "flowNodeLocks.create",
+      "method": "POST",
+      "path": "/flow-node-locks",
+      "envelope": "response-result",
+      "sdkFunctions": ["sendFlowNodeLockedMsg"],
+      "sdkGroups": ["flowNodeLocked.send"]
+    },
+    {
+      "id": "flowNodeLocks.getById",
+      "method": "GET",
+      "path": "/flow-node-locks/{id}",
+      "envelope": "response-result",
+      "sdkFunctions": ["getFlowNodeLockedMsgById"],
+      "sdkGroups": ["flowNodeLocked.getById"]
+    },
+    {
+      "id": "flowNodeLocks.list",
+      "method": "GET",
+      "path": "/flow-node-locks",
+      "envelope": "response-result",
+      "sdkFunctions": ["listFlowNodeLockedMsgs"],
+      "sdkGroups": ["flowNodeLocked.list"]
+    },
+    {
+      "id": "flowNodeLocks.getStatus",
+      "method": "GET",
+      "path": "/flow-node-locks/status?flowNodePubkey={flowNodePubkey}",
+      "envelope": "response-result",
+      "sdkFunctions": ["getFlowNodeLockedMsgByFlowNodePubkey"],
+      "sdkGroups": ["flowNodeLocked.getByFlowNodePubkey"]
+    },
+    {
+      "id": "centralPubkeyEmpowerments.create",
+      "method": "POST",
+      "path": "/central-pubkey-empowerments",
+      "envelope": "response-result",
+      "sdkFunctions": ["sendCentralPubkeyEmpowerMsg"],
+      "sdkGroups": ["centralPubkeyEmpower.send"]
+    },
+    {
+      "id": "centralPubkeyEmpowerments.getById",
+      "method": "GET",
+      "path": "/central-pubkey-empowerments/{id}",
+      "envelope": "response-result",
+      "sdkFunctions": ["getCentralPubkeyEmpowerMsgById"],
+      "sdkGroups": ["centralPubkeyEmpower.getById"]
+    },
+    {
+      "id": "centralPubkeyEmpowerments.list",
+      "method": "GET",
+      "path": "/central-pubkey-empowerments",
+      "envelope": "response-result",
+      "sdkFunctions": ["listCentralPubkeyEmpowerMsgs", "getCentralPubkeyEmpowerMsgByFlowNodePubkey"],
+      "sdkGroups": ["centralPubkeyEmpower.list", "centralPubkeyEmpower.getByFlowNodePubkey"]
+    },
+    {
+      "id": "centralPubkeyLocks.create",
+      "method": "POST",
+      "path": "/central-pubkey-locks",
+      "envelope": "response-result",
+      "sdkFunctions": ["sendCentralPubkeyLockedMsg"],
+      "sdkGroups": ["centralPubkeyLocked.send"]
+    },
+    {
+      "id": "centralPubkeyLocks.getById",
+      "method": "GET",
+      "path": "/central-pubkey-locks/{id}",
+      "envelope": "response-result",
+      "sdkFunctions": ["getCentralPubkeyLockedMsgById"],
+      "sdkGroups": ["centralPubkeyLocked.getById"]
+    },
+    {
+      "id": "centralPubkeyLocks.list",
+      "method": "GET",
+      "path": "/central-pubkey-locks",
+      "envelope": "response-result",
+      "sdkFunctions": ["listCentralPubkeyLockedMsgs"],
+      "sdkGroups": ["centralPubkeyLocked.list"]
+    },
+    {
+      "id": "centralPubkeyLocks.getStatus",
+      "method": "GET",
+      "path": "/central-pubkey-locks/status?centralPubkey={centralPubkey}",
+      "envelope": "response-result",
+      "sdkFunctions": ["getCentralPubkeyLockedMsgByCentralPubkey"],
+      "sdkGroups": ["centralPubkeyLocked.getByCentralPubkey"]
+    },
+    {
+      "id": "transactionRecords.create",
+      "method": "POST",
+      "path": "/transaction-records",
+      "envelope": "response-result",
+      "sdkFunctions": ["sendTransactionRecordMsg"],
+      "sdkGroups": ["transactionRecord.send"]
+    },
+    {
+      "id": "transactionRecords.getById",
+      "method": "GET",
+      "path": "/transaction-records/{id}",
+      "envelope": "response-result",
+      "sdkFunctions": ["getTransactionRecordMsgById"],
+      "sdkGroups": ["transactionRecord.getById"]
+    },
+    {
+      "id": "transactionRecords.search",
+      "method": "GET",
+      "path": "/transaction-records",
+      "envelope": "response-result",
+      "sdkFunctions": [
+        "searchTransactionRecordMsgs",
+        "getTransactionRecordMsgByConsumeNodePubkey",
+        "getTransactionRecordMsgByFlowNodePubkey",
+        "getTransactionRecordMsgByBothPubkeys"
+      ],
+      "sdkGroups": [
+        "transactionRecord.search",
+        "transactionRecord.getByConsumeNodePubkey",
+        "transactionRecord.getByFlowNodePubkey",
+        "transactionRecord.getByBothPubkeys"
+      ]
+    },
+    {
+      "id": "transactionMounts.create",
+      "method": "POST",
+      "path": "/transaction-mounts",
+      "envelope": "response-result",
+      "sdkFunctions": ["sendTransactionMountMsg"],
+      "sdkGroups": ["transactionMount.send"]
+    },
+    {
+      "id": "transactionMounts.getById",
+      "method": "GET",
+      "path": "/transaction-mounts/{id}",
+      "envelope": "response-result",
+      "sdkFunctions": ["getTransactionMountMsgById"],
+      "sdkGroups": ["transactionMount.getById"]
+    },
+    {
+      "id": "transactionMounts.search",
+      "method": "GET",
+      "path": "/transaction-mounts",
+      "envelope": "response-result",
+      "sdkFunctions": [
+        "searchTransactionMountMsgs",
+        "getTransactionMountMsgByMountedTransactionRecordId",
+        "getTransactionMountMsgByConsumeNodePubkey",
+        "getTransactionMountMsgByFlowNodePubkey",
+        "getTransactionMountMsgByBothPubkeys"
+      ],
+      "sdkGroups": [
+        "transactionMount.search",
+        "transactionMount.getByMountedTransactionRecordId",
+        "transactionMount.getByConsumeNodePubkey",
+        "transactionMount.getByFlowNodePubkey",
+        "transactionMount.getByBothPubkeys"
+      ]
+    },
+    {
+      "id": "static.datFiles",
+      "method": "GET",
+      "path": "/dat/**",
+      "envelope": "raw-static",
+      "sdkFunctions": [],
+      "sdkGroups": [],
+      "clientMethods": ["getRaw", "download"]
+    },
+    {
+      "id": "static.sourceCodeArchives",
+      "method": "GET",
+      "path": "/source-code/**",
+      "envelope": "raw-static",
+      "sdkFunctions": [],
+      "sdkGroups": [],
+      "clientMethods": ["getRaw", "download"]
+    }
+  ]
+}

@@ -18,6 +18,11 @@
 - [消息序列化](#消息序列化)
 - [API 接口一览](#api-接口一览)
 - [完整使用示例](#完整使用示例)
+- [类型速查](#类型速查)
+- [错误处理](#错误处理)
+- [浏览器兼容性](#浏览器兼容性)
+- [开发与校验](#开发与校验)
+- [发布（维护者）](#发布维护者)
 
 ---
 
@@ -34,7 +39,8 @@ yarn add @nmsci/sdk
 pnpm add @nmsci/sdk
 ```
 
-> **前置要求**：Node.js >= 18（需要 `crypto.subtle` API），或任何现代浏览器环境。
+> 运行时支持：Node.js >= 18，或任何现代浏览器环境。Node 18 会在缺少全局 Web Crypto 时回退到 `node:crypto.webcrypto`。
+> 开发/测试工具链：Node.js 20.19+ 或 22.12+。Vitest/Vite 需要更高 Node 版本；Node 18 仅执行构建后 pack 运行时冒烟测试。
 
 ---
 
@@ -138,6 +144,27 @@ console.log(res.data);
 const res = await client.post<T>('/path', bodyData);
 ```
 
+### Raw 静态资源下载
+
+`/dat/**` 和 `/source-code/**` 由后端直接返回文件内容，不包裹 `ResponseResult<T>`。这类接口应使用 raw 方法，SDK 不会尝试按 JSON 解析响应体。
+
+```typescript
+const response = await client.getRaw('/dat/blk00000001.dat');
+const contentType = response.headers.get('content-type');
+const bytes = await response.arrayBuffer();
+
+const sourceArchive = await client.download('/source-code/source_code_v1.zip');
+```
+
+组合入口同样可以通过底层 client 访问：
+
+```typescript
+import { NmsciSdk } from '@nmsci/sdk';
+
+const sdk = new NmsciSdk({ baseUrl: 'http://localhost:8080' });
+const datBytes = await sdk.client.download('/dat/blk00000001.dat');
+```
+
 ### Raw 与 Normalized DTO
 
 后端 JSON 中的 `amount`、`confirmTimestamp`、`height` 等 64 位整数以 `number` 返回，可能超过 `Number.MAX_SAFE_INTEGER`。SDK 的函数式 API 保持 wire JSON 形态并返回 `*Raw` 类型；如需 bigint，可显式调用 normalize 函数。`ReturningFlowRateResponseDTO` 的金额指标是后端 `double`，normalize 后仍保持 `number`。
@@ -156,6 +183,22 @@ const normalized = normalizeApiResponse(raw, normalizeTransactionRecordMsg); // 
 ```
 
 如果需要规范化分页查询结果，可使用 `normalizeApiResponseSlice(response, normalizeItem)`；冻结状态查询的 `locked/lockedMsg` 包装可使用 `normalizeLockedMessageResponseDTO(raw, normalizeItem)`。如果原始 number 已超过安全整数范围，normalize 会抛错，避免把已经丢精度的值静默转换成 bigint。difficulty target 保持 hex string，与后端序列化保持一致。
+
+如果希望避免每次手动组合 normalize helper，可使用 `NmsciSdk.normalized.*`。它保留 `ApiResponse<T>` envelope，但 `data` 已经是规范化 DTO：
+
+```typescript
+import { NmsciSdk } from '@nmsci/sdk';
+
+const sdk = new NmsciSdk({ baseUrl: 'http://localhost:8080' });
+
+const block = await sdk.normalized.block.getLast();
+const records = await sdk.normalized.transactionRecord.search(undefined, { page: 0, size: 20 });
+
+const height = block.data.height; // bigint
+const amount = records.data.content[0]?.amount; // bigint | undefined
+```
+
+原始 `sdk.*` 分组仍返回后端 wire JSON 类型，适合需要完全贴合后端响应的调用方。
 
 ### 组合型 SDK
 
@@ -1018,14 +1061,38 @@ const block = await safeApiCall(() => client.get('/blocks/latest'));
 
 ---
 
+## 开发与校验
+
+完整本地校验请使用 Node.js 20.19+ 或 22.12+；Node 18 仅执行构建后 pack 运行时冒烟测试，用于确认发布包在运行时可导入和执行。
+
+本地提交前建议按 CI 同序执行：
+
+```bash
+npm ci
+npm run test:encoding
+npm run typecheck
+npm test
+npm run test:types
+npm run build
+npm run test:pack:prepared
+```
+
+`test:encoding` 会扫描已跟踪的文本文件，发现 Unicode replacement character 或常见 UTF-8 mojibake 标记时失败。不要仅凭 PowerShell 终端显示判断文件损坏；以 UTF-8 文件内容和该检查结果为准。
+
+`test:pack:prepared` 假定 `dist` 已由上一条 `npm run build` 生成，用于 CI / release 的构建后 pack 冒烟检查，避免 pack 检查自身重复构建。release 脚本在 publish 阶段还会使用 `--ignore-scripts` 跳过 npm lifecycle scripts，确保最终发布产物仍来自显式 build + pack smoke 路径。单独在本地检查发布包时仍可运行 `npm run test:pack`，它会先构建再执行 pack 冒烟测试。
+
+---
+
 ## 发布（维护者）
 
-本包使用 `scripts/release.mjs` 一键发布。脚本会按顺序执行：**环境检查 → typecheck + 测试 → bump 版本 → 构建 → `npm publish --access public` → git commit + tag**。`git commit`/`tag` 只在 `npm publish` 成功后才执行；任何中途失败都会逐字节回滚 `package.json` / `package-lock.json` 的版本改动，保持工作区干净，不会留下「已提交版本却未发布」的中间态。
+本包使用 `scripts/release.mjs` 一键发布。脚本会按顺序执行：**环境检查 → 编码检查 → typecheck → 测试 → 类型级测试 → bump 版本 → 构建 → pack 冒烟测试 → `npm publish --access public --ignore-scripts` → git commit + tag**。发布阶段会跳过 npm lifecycle scripts，因为显式 build + pack smoke 已完成；`package.json` 的 `prepublishOnly` 仍保留为手动 `npm publish` 的安全网。`git commit`/`tag` 只在 `npm publish` 成功后才执行；创建版本 commit 之前的失败会逐字节回滚 `package.json` / `package-lock.json` 的版本改动，commit/tag/publish 边界上的失败可能需要按 `git status` 和实际发布状态人工清理。
+
+> 当前 GitHub Actions 只做验证，不自动发布。若后续启用 npm Trusted Publishing / provenance，需要先在 npm 包侧配置 trusted publisher，再增加带 `id-token: write` 权限的发布 workflow，并使用满足 npm 要求的 Node/npm 版本。
 
 前置条件：工作区干净、已 `npm login`，建议在 `main` / `dev` 分支上操作。
 
 ```bash
-# 预演（强烈建议先跑一遍）：跑测试/构建并执行 npm publish --dry-run，不真正发布
+# 预演（强烈建议先跑一遍）：跑完整门禁、构建、pack 冒烟，并执行 npm publish --ignore-scripts --dry-run，不真正发布
 npm run release:dry
 
 # 正式发布

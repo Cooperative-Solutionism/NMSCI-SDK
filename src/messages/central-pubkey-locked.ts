@@ -1,8 +1,16 @@
 import { MsgType } from './types';
 import type { Pubkey, Signature, UUID } from '../core/types';
-import { concat, signatureToBytes, uuidToBytes, toBytesBigEndian, pubkeyToBytes, toHex } from '../core/encoding';
+import { concat, toBytesBigEndian, toHex } from '../core/encoding';
 import { signData } from '../core/crypto';
 import { MSG_SPECS } from '../protocol/spec';
+import {
+  optionalSignatureField,
+  optionalUint64BigIntField,
+  pubkeyField,
+  signatureField,
+  uint64BigIntField,
+  uuidField,
+} from './validation';
 
 /** 187-byte Central Pubkey Locked message (协议定义为187字节) */
 export interface CentralPubkeyLockedMessage {
@@ -18,16 +26,14 @@ export interface CentralPubkeyLockedMessage {
  * Build the 187-byte serialized form.
  */
 export function serializeCentralPubkeyLocked(msg: CentralPubkeyLockedMessage): Uint8Array {
-  const sigPre = msg.centralSignaturePre ? signatureToBytes(msg.centralSignaturePre) : new Uint8Array(64);
-  const timestamp = msg.confirmTimestamp != null
-    ? toBytesBigEndian(msg.confirmTimestamp, 8)
-    : new Uint8Array(8);
-  const centralSig = msg.centralSignature ? signatureToBytes(msg.centralSignature) : new Uint8Array(64);
+  const sigPre = optionalSignatureField(msg.centralSignaturePre, 'centralSignaturePre');
+  const timestamp = optionalUint64BigIntField(msg.confirmTimestamp, 'confirmTimestamp');
+  const centralSig = optionalSignatureField(msg.centralSignature, 'centralSignature');
 
   return concat(
     toBytesBigEndian(MsgType.CENTRAL_KEY_FREEZE, 2), // 2 bytes
-    uuidToBytes(msg.uuid),                              // 16 bytes
-    pubkeyToBytes(msg.centralPubkey),                  // 33 bytes
+    uuidField(msg.uuid, 'uuid'),                       // 16 bytes
+    pubkeyField(msg.centralPubkey, 'centralPubkey'),   // 33 bytes
     sigPre,                                             // 64 bytes
     timestamp,                                           // 8 bytes
     centralSig,                                          // 64 bytes
@@ -41,7 +47,7 @@ export function serializeCentralPubkeyLockedSubmitPayload(
 ): Uint8Array {
   return concat(
     buildCentralPubkeyLockedPayload(msg),
-    signatureToBytes(msg.centralSignaturePre),
+    signatureField(msg.centralSignaturePre, 'centralSignaturePre'),
   );
 }
 
@@ -55,8 +61,8 @@ export function buildCentralPubkeyLockedPayload(params: {
 }): Uint8Array {
   return concat(
     toBytesBigEndian(MsgType.CENTRAL_KEY_FREEZE, 2),
-    uuidToBytes(params.uuid),
-    pubkeyToBytes(params.centralPubkey),
+    uuidField(params.uuid, 'uuid'),
+    pubkeyField(params.centralPubkey, 'centralPubkey'),
   );
 }
 
@@ -84,9 +90,9 @@ export function buildCentralPubkeyLockedFullPayload(params: {
 }): Uint8Array {
   return concat(
     toBytesBigEndian(MsgType.CENTRAL_KEY_FREEZE, 2),
-    uuidToBytes(params.uuid),
-    pubkeyToBytes(params.centralPubkey),
-    signatureToBytes(params.centralSignaturePre),
-    toBytesBigEndian(params.confirmTimestamp, 8),
+    uuidField(params.uuid, 'uuid'),
+    pubkeyField(params.centralPubkey, 'centralPubkey'),
+    signatureField(params.centralSignaturePre, 'centralSignaturePre'),
+    uint64BigIntField(params.confirmTimestamp, 'confirmTimestamp'),
   );
 }

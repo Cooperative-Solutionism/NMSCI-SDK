@@ -75,4 +75,81 @@ describe('ApiClient', () => {
       response: { code: 400, message: 'bad payload', data: null },
     } satisfies Partial<ApiClientError>);
   });
+
+  it('returns raw responses without parsing them as ResponseResult JSON', async () => {
+    let requestedUrl = '';
+    const client = new ApiClient({
+      baseUrl: 'https://example.test',
+      fetch: async (url) => {
+        requestedUrl = url;
+        return new Response('not json', {
+          status: 200,
+          headers: { 'Content-Type': 'application/octet-stream' },
+        });
+      },
+    });
+
+    const response = await client.getRaw('/dat/blk00000001.dat');
+
+    expect(requestedUrl).toBe('https://example.test/dat/blk00000001.dat');
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toBe('application/octet-stream');
+    expect(await response.text()).toBe('not json');
+  });
+
+  it('downloads raw response bodies as ArrayBuffer', async () => {
+    const client = new ApiClient({
+      baseUrl: 'https://example.test',
+      fetch: async () => new Response(new Uint8Array([0, 1, 2, 255]), { status: 200 }),
+    });
+
+    const bytes = await client.download('/source-code/source_code_v1.zip');
+
+    expect(Array.from(new Uint8Array(bytes))).toEqual([0, 1, 2, 255]);
+  });
+
+  it('serializes raw query params and skips undefined values', async () => {
+    let requestedUrl = '';
+    const client = new ApiClient({
+      baseUrl: 'https://example.test',
+      fetch: async (url) => {
+        requestedUrl = url;
+        return new Response('raw', { status: 200 });
+      },
+    });
+
+    await client.getRaw('/dat/file.dat', { n: 1, enabled: false, omitted: undefined });
+
+    expect(requestedUrl).toBe('https://example.test/dat/file.dat?n=1&enabled=false');
+  });
+
+  it('sends bearer auth headers for raw requests', async () => {
+    let headers = new Headers();
+    const client = new ApiClient({
+      baseUrl: 'https://example.test',
+      authToken: 'secret-token',
+      fetch: async (_url, init) => {
+        headers = new Headers(init?.headers);
+        return new Response('raw', { status: 200 });
+      },
+    });
+
+    await client.getRaw('/source-code/source_code_v1.zip');
+
+    expect(headers.get('Authorization')).toBe('Bearer secret-token');
+  });
+
+  it('throws ApiClientError for non-2xx raw responses', async () => {
+    const client = new ApiClient({
+      baseUrl: 'https://example.test',
+      fetch: async () => new Response('missing', { status: 404 }),
+    });
+
+    await expect(client.getRaw('/dat/missing.dat')).rejects.toMatchObject({
+      name: 'ApiClientError',
+      message: 'HTTP request failed with status 404',
+      status: 404,
+      url: 'https://example.test/dat/missing.dat',
+    } satisfies Partial<ApiClientError>);
+  });
 });

@@ -3,12 +3,16 @@
 /**
  * @nmsci/sdk 自动发布脚本 / Automated release script
  *
- * 流程：环境检查 → typecheck + 测试 → bump 版本 → 构建 → npm publish
- *      → git commit + tag（仅在发布成功后）。
+ * 流程：环境检查 → 编码检查 → typecheck → 测试 → 类型级测试 → bump 版本
+ *      → 构建 → pack 冒烟测试 → `npm publish --access public --ignore-scripts` → git commit + tag。
  *
- * 设计原则：git commit / tag 只在 `npm publish` 成功之后执行；任何中途失败
- * 都会回滚 package.json / package-lock.json 的版本改动，保持工作区干净，
- * 不会留下「已提交版本却未发布」的中间态。
+ * 设计原则：git commit / tag 只在 `npm publish` 成功之后执行；创建版本 commit
+ * 之前的失败会逐字节回滚 package.json / package-lock.json 的版本改动。commit/tag/publish
+ * 边界失败可能需要按 `git status` 和实际发布状态人工清理。
+ *
+ * Release publish uses `npm publish --ignore-scripts` so the explicit quality
+ * gate, build, and pack smoke are the only release build path. Manual
+ * `npm publish` still runs package.json `prepublishOnly` as a safety net.
  *
  * 用法见 `node scripts/release.mjs --help`。
  */
@@ -66,7 +70,7 @@ const snapshotVersionFiles = () => {
     .filter(existsSync)
     .map((path) => ({ path, content: readFileSync(path) }));
 };
-/** 用快照逐字节还原版本文件，恢复干净工作区。 */
+/** 用快照逐字节还原版本文件改动。 */
 const rollbackVersion = () => {
   for (const { path, content } of versionFileSnapshots) {
     try { writeFileSync(path, content); } catch { /* ignore */ }
@@ -101,8 +105,8 @@ bump（默认 patch）:
   或具体版本号，如 2.5.0、2.5.0-beta.0
 
 options:
-  --dry-run          预演：跑检查/测试/构建并执行 npm publish --dry-run，不真正发布、不提交
-  --skip-tests       跳过 typecheck 与单元测试（不推荐）
+  --dry-run          预演：跑检查/测试/构建/pack smoke 并执行 npm publish --ignore-scripts --dry-run，不真正发布、不提交
+  --skip-tests       跳过发布前质量门禁（仍会构建和执行 pack smoke，不推荐）
   --tag <dist-tag>   npm dist-tag（默认 latest，可用 next/beta 等）
   --preid <id>       预发布标识（配合 prerelease/prepatch，如 beta）
   --otp <code>       npm 双因素验证一次性密码
@@ -111,6 +115,11 @@ options:
   --allow-dirty      允许工作区存在未提交更改
   -y, --yes          跳过所有交互确认（用于 CI / 非交互式）
   -h, --help         显示本帮助
+
+release publish:
+  The script runs explicit build + pack smoke first, then calls npm publish
+  with --ignore-scripts so npm lifecycle scripts do not rebuild dist. Manual
+  npm publish still uses package.json prepublishOnly as a safety net.
 
 示例:
   npm run release                          # 补丁版本（如 2.0.1 → 2.0.2）
@@ -192,12 +201,16 @@ async function main() {
 
   // ── 2. 质量门禁 ───────────────────────────────────────────────────────────
   if (flags.skipTests) {
-    warn('已跳过 typecheck 与单元测试（--skip-tests）。');
+    warn('已跳过发布前质量门禁（--skip-tests）；仍会执行构建与打包冒烟测试。');
   } else {
+    step('文本编码检查 / Text encoding');
+    run('npm run test:encoding');
     step('类型检查 / Typecheck');
     run('npm run typecheck');
     step('单元测试 / Tests');
     run('npm test');
+    step('类型级测试 / Type tests');
+    run('npm run test:types');
     ok('质量门禁通过。');
   }
 
@@ -223,18 +236,20 @@ async function main() {
     die('已取消，已回滚版本号。', 0);
   }
 
-  // ── 5. 构建 ───────────────────────────────────────────────────────────────
+  // ── 5. 构建与打包冒烟测试 ─────────────────────────────────────────────────
   step('构建 / Build');
   run('npm run build');
-  ok('构建完成。');
+  step('打包冒烟测试 / Pack smoke');
+  run('npm run test:pack:prepared');
+  ok('构建与打包冒烟测试完成。');
 
   // ── 6. 发布 ───────────────────────────────────────────────────────────────
   const distTagArg = flags.distTag && flags.distTag !== 'latest' ? ` --tag ${flags.distTag}` : '';
   const otpArg = flags.otp ? ` --otp ${flags.otp}` : '';
 
   if (flags.dryRun) {
-    step('发布预演 / npm publish --dry-run');
-    run(`npm publish --access public --dry-run${distTagArg}`);
+    step('发布预演 / npm publish --ignore-scripts --dry-run');
+    run(`npm publish --access public --ignore-scripts --dry-run${distTagArg}`);
     rollbackVersion();
     ok('DRY RUN 完成：未发布、未提交，已回滚版本号。');
     return;
@@ -242,7 +257,7 @@ async function main() {
 
   step('发布到 npm / npm publish');
   try {
-    run(`npm publish --access public${distTagArg}${otpArg}`);
+    run(`npm publish --access public --ignore-scripts${distTagArg}${otpArg}`);
   } catch {
     rollbackVersion();
     die('npm publish 失败，已回滚版本号（未产生 git 提交 / 标签）。请检查上方错误后重试。');

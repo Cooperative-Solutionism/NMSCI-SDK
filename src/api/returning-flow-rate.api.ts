@@ -1,4 +1,13 @@
 import { ApiClient, ApiResponse, type QueryParams } from './client';
+import {
+  validateCompressedPubkey,
+  validateNoIdPubkeyMix,
+  validateRequiredCompressedPubkey,
+  validateRequiredParams,
+  validateRequiredUuid,
+  validateTimeRange,
+  validateUuid,
+} from './query-validation';
 import type { ReturningFlowRateResponseDTORaw } from './types';
 
 export type ReturningFlowRateResponse = ApiResponse<ReturningFlowRateResponseDTORaw>;
@@ -17,6 +26,19 @@ export async function getReturningFlowRateById(
     currencyType?: number;
   },
 ): Promise<ApiResponse<ReturningFlowRateResponseDTORaw>> {
+  validateRequiredParams(params, 'returning-flow-rates');
+  const mode = validateNoIdPubkeyMix(
+    params as Record<string, unknown>,
+    ['targetId', 'sourceId'],
+    ['targetPubkey', 'sourcePubkey'],
+    'returning-flow-rates',
+  );
+  if (mode === 'pubkey') {
+    throw new Error('returning-flow-rates cannot mix id and pubkey query parameters');
+  }
+  validateRequiredUuid(params.targetId, 'targetId');
+  validateUuid(params.sourceId, 'sourceId');
+  validateTimeRange(params.startTime, params.endTime, 'returning-flow-rates');
   const query: QueryParams = { targetId: params.targetId };
   if (params.sourceId) query['sourceId'] = params.sourceId;
   if (params.startTime !== undefined) query['startTime'] = params.startTime;
@@ -39,6 +61,19 @@ export async function getReturningFlowRateByPubkey(
     currencyType?: number;
   },
 ): Promise<ApiResponse<ReturningFlowRateResponseDTORaw>> {
+  validateRequiredParams(params, 'returning-flow-rates');
+  const mode = validateNoIdPubkeyMix(
+    params as Record<string, unknown>,
+    ['targetId', 'sourceId'],
+    ['targetPubkey', 'sourcePubkey'],
+    'returning-flow-rates',
+  );
+  if (mode === 'id') {
+    throw new Error('returning-flow-rates cannot mix id and pubkey query parameters');
+  }
+  validateRequiredCompressedPubkey(params.targetPubkey, 'targetPubkey');
+  validateCompressedPubkey(params.sourcePubkey, 'sourcePubkey');
+  validateTimeRange(params.startTime, params.endTime, 'returning-flow-rates');
   const query: QueryParams = { targetPubkey: params.targetPubkey };
   if (params.sourcePubkey) query['sourcePubkey'] = params.sourcePubkey;
   if (params.startTime !== undefined) query['startTime'] = params.startTime;

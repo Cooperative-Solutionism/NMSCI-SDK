@@ -1,4 +1,12 @@
 import { ApiClient, ApiResponse } from './client';
+import {
+  validateCompressedPubkey,
+  validatePageQuery,
+  validateRequiredCompressedPubkey,
+  validateRequiredUuid,
+  validateTimeRange,
+  validateUuid,
+} from './query-validation';
 import type { PageQuery, SliceResponseDTO, TransactionMountMsgRaw } from './types';
 
 export type TransactionMountMsgResponse = ApiResponse<TransactionMountMsgRaw>;
@@ -14,6 +22,24 @@ export interface TransactionMountSearchFilters {
   endTime?: number;
 }
 
+type TransactionMountSearchQuery = TransactionMountSearchFilters & PageQuery;
+
+function validateTransactionMountSearchQuery(
+  filters?: TransactionMountSearchFilters,
+  pagination?: PageQuery,
+): TransactionMountSearchQuery {
+  validatePageQuery(filters as PageQuery | undefined, 'transaction-mounts');
+  validatePageQuery(pagination, 'transaction-mounts');
+
+  const query = { ...filters, ...pagination } as TransactionMountSearchQuery;
+  validatePageQuery(query, 'transaction-mounts');
+  validateCompressedPubkey(query.consumeNodePubkey, 'consumeNodePubkey');
+  validateCompressedPubkey(query.flowNodePubkey, 'flowNodePubkey');
+  validateUuid(query.mountedTransactionRecordId, 'mountedTransactionRecordId');
+  validateTimeRange(query.startTime, query.endTime, 'transaction-mounts');
+  return query;
+}
+
 export async function sendTransactionMountMsg(
   client: ApiClient,
   body: Uint8Array | number[],
@@ -25,6 +51,7 @@ export async function getTransactionMountMsgById(
   client: ApiClient,
   id: string,
 ): Promise<ApiResponse<TransactionMountMsgRaw>> {
+  validateRequiredUuid(id, 'id');
   return client.get<TransactionMountMsgRaw>(`/transaction-mounts/${encodeURIComponent(id)}`);
 }
 
@@ -36,10 +63,10 @@ export async function searchTransactionMountMsgs(
   filters?: TransactionMountSearchFilters,
   pagination?: PageQuery,
 ): Promise<ApiResponse<SliceResponseDTO<TransactionMountMsgRaw>>> {
-  return client.get<SliceResponseDTO<TransactionMountMsgRaw>>('/transaction-mounts', {
-    ...filters,
-    ...pagination,
-  });
+  return client.get<SliceResponseDTO<TransactionMountMsgRaw>>(
+    '/transaction-mounts',
+    validateTransactionMountSearchQuery(filters, pagination),
+  );
 }
 
 /**
@@ -51,6 +78,7 @@ export async function getTransactionMountMsgByMountedTransactionRecordId(
   mountedTransactionRecordId: string,
   pagination?: PageQuery,
 ): Promise<ApiResponse<SliceResponseDTO<TransactionMountMsgRaw>>> {
+  validateRequiredUuid(mountedTransactionRecordId, 'mountedTransactionRecordId');
   return searchTransactionMountMsgs(client, { mountedTransactionRecordId }, pagination);
 }
 
@@ -59,6 +87,7 @@ export async function getTransactionMountMsgByConsumeNodePubkey(
   consumeNodePubkey: string,
   pagination?: PageQuery,
 ): Promise<ApiResponse<SliceResponseDTO<TransactionMountMsgRaw>>> {
+  validateRequiredCompressedPubkey(consumeNodePubkey, 'consumeNodePubkey');
   return searchTransactionMountMsgs(client, { consumeNodePubkey }, pagination);
 }
 
@@ -67,6 +96,7 @@ export async function getTransactionMountMsgByFlowNodePubkey(
   flowNodePubkey: string,
   pagination?: PageQuery,
 ): Promise<ApiResponse<SliceResponseDTO<TransactionMountMsgRaw>>> {
+  validateRequiredCompressedPubkey(flowNodePubkey, 'flowNodePubkey');
   return searchTransactionMountMsgs(client, { flowNodePubkey }, pagination);
 }
 
@@ -76,5 +106,7 @@ export async function getTransactionMountMsgByBothPubkeys(
   flowNodePubkey: string,
   pagination?: PageQuery,
 ): Promise<ApiResponse<SliceResponseDTO<TransactionMountMsgRaw>>> {
+  validateRequiredCompressedPubkey(consumeNodePubkey, 'consumeNodePubkey');
+  validateRequiredCompressedPubkey(flowNodePubkey, 'flowNodePubkey');
   return searchTransactionMountMsgs(client, { consumeNodePubkey, flowNodePubkey }, pagination);
 }

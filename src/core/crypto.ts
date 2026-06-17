@@ -1,9 +1,24 @@
-import { ec as EC } from 'elliptic';
-import { toHex, pubkeyToBytes, signatureToBytes } from './encoding';
-import { doubleSha256, doubleSha256Hex } from './hash';
+import { etc, getPublicKey as derivePublicKey, Point, signAsync, verify } from '@noble/secp256k1';
+import { concat, fromHex, toHex, pubkeyToBytes, signatureToBytes } from './encoding';
+import { doubleSha256, doubleSha256Hex, getSubtleCrypto } from './hash';
 
-const ec = new EC('secp256k1');
 const CURVE_ORDER = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
+
+etc.hmacSha256Async = async (key, ...msgs) => {
+  const subtle = await getSubtleCrypto();
+  const cryptoKey = await subtle.importKey('raw', key as BufferSource, { name: 'HMAC', hash: 'SHA-256' }, false, [
+    'sign',
+  ]);
+  return new Uint8Array(await subtle.sign('HMAC', cryptoKey, concat(...msgs) as BufferSource));
+};
+
+function privateKeyToBytes(privateKeyHex: string, requireFullLength = true): Uint8Array {
+  const clean = privateKeyHex.replace(/^0x/, '');
+  if (requireFullLength && clean.length !== 64) {
+    throw new Error(`Private key must be 64 hex chars, got ${clean.length}`);
+  }
+  return fromHex(clean.padStart(64, '0'), 32);
+}
 
 export function generateKeyPair(): { privateKey: string; publicKey: string } {
   for (;;) {
@@ -12,16 +27,13 @@ export function generateKeyPair(): { privateKey: string; publicKey: string } {
     const pkBigInt = BigInt('0x' + toHex(privateKeyBytes));
     if (pkBigInt < CURVE_ORDER && pkBigInt !== 0n) {
       const privateKeyHex = toHex(privateKeyBytes);
-      const keyPair = ec.keyFromPrivate(privateKeyHex, 'hex');
-      return { privateKey: privateKeyHex, publicKey: keyPair.getPublic(true, 'hex') };
+      return { privateKey: privateKeyHex, publicKey: toHex(derivePublicKey(privateKeyBytes, true)) };
     }
   }
 }
 
 export function getPublicKeyFromPrivate(privateKeyHex: string): string {
-  const clean = privateKeyHex.replace(/^0x/, '');
-  const keyPair = ec.keyFromPrivate(clean, 'hex');
-  return keyPair.getPublic(true, 'hex');
+  return toHex(derivePublicKey(privateKeyToBytes(privateKeyHex, false), true));
 }
 
 export function validatePublicKey(publicKeyHex: string): { isValid: boolean; error?: string } {
@@ -29,11 +41,8 @@ export function validatePublicKey(publicKeyHex: string): { isValid: boolean; err
     if (!publicKeyHex || typeof publicKeyHex !== 'string') {
       return { isValid: false, error: 'Public key must be a string' };
     }
-    const clean = toHex(pubkeyToBytes(publicKeyHex));
-    const keyPair = ec.keyFromPublic(clean, 'hex');
-    if (!keyPair.getPublic().validate()) {
-      return { isValid: false, error: 'Public key is not on secp256k1 curve' };
-    }
+    const clean = pubkeyToBytes(publicKeyHex);
+    Point.fromBytes(clean).assertValidity();
     return { isValid: true };
   } catch (e) {
     return { isValid: false, error: `Validation failed: ${e instanceof Error ? e.message : String(e)}` };
@@ -60,25 +69,13 @@ export async function signData(data: Uint8Array, privateKeyHex: string): Promise
   if (cleanHex.length !== 64) {
     throw new Error(`Private key must be 64 hex chars, got ${cleanHex.length}`);
   }
-
-  const hashedData = await doubleSha256(data);
-
-  const keyPair = ec.keyFromPrivate(cleanHex, 'hex');
-  const signature = keyPair.sign(hashedData, { canonical: true });
-
-  let finalS = signature.s;
-  const halfCurveOrder = ec.curve.n.shrn(1);
-  if (finalS.gt(halfCurveOrder)) {
-    finalS = ec.curve.n.sub(finalS);
+  if (!validatePrivateKey(cleanHex)) {
+    throw new Error('Private key must be a valid secp256k1 scalar');
   }
 
-  const rBytes = new Uint8Array(signature.r.toArray('be', 32));
-  const sBytes = new Uint8Array(finalS.toArray('be', 32));
-
-  const rsSignature = new Uint8Array(64);
-  rsSignature.set(rBytes, 0);
-  rsSignature.set(sBytes, 32);
-  return rsSignature;
+  const hashedData = await doubleSha256(data);
+  const signature = await signAsync(hashedData, privateKeyToBytes(cleanHex), { lowS: true, extraEntropy: false });
+  return signature.toCompactRawBytes();
 }
 
 export function validateSignatureLowS(signatureHex: string): { isValid: boolean; error?: string } {
@@ -106,15 +103,7 @@ export async function verifySignature(
     }
 
     const hashedData = await doubleSha256(data);
-
-    const r = signature.slice(0, 32);
-    const s = signature.slice(32, 64);
-    const rHex = toHex(r);
-    const sHex = toHex(s);
-
-    const cleanPubkey = publicKeyHex.replace(/^0x/, '');
-    const keyPair = ec.keyFromPublic(cleanPubkey, 'hex');
-    return keyPair.verify(hashedData, { r: rHex, s: sHex });
+    return verify(signature, hashedData, pubkeyToBytes(publicKeyHex), { lowS: false });
   } catch {
     return false;
   }

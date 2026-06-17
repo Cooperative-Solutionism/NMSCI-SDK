@@ -1,0 +1,34 @@
+# Changelog
+
+## 3.0.0
+
+### Breaking changes
+
+- `getConsumeChainEdges()` now resolves to `ApiResponse<SliceResponseDTO<ConsumeChainEdgeRaw>>` instead of `ApiResponse<ConsumeChainEdgeRaw[]>`.
+
+  Before:
+
+  ```ts
+  response.data.map(edge => edge.id)
+  ```
+
+  After:
+
+  ```ts
+  response.data.content.map(edge => edge.id)
+  ```
+
+- `sendCentralPubkeyLockedMsg()` now resolves to `ApiResponse<CentralPubkeyLockedMsgRaw>` instead of `void`.
+- `BlockInfoRaw.rawBytes` was removed because backend `BlockInfo` does not output `rawBytes`.
+
+### Added
+
+- Message collection-root helpers for documented slice-backed endpoints.
+- Grouped `.list(...)` helpers for message collections.
+- Runtime validation for clearly invalid SDK query inputs.
+- Packed-package smoke testing for public ESM and CommonJS entry points, including secp256k1 derive/sign/verify calls.
+
+### Security and maintenance
+
+- Dev test tooling upgraded to remove high/critical audit findings.
+- Production secp256k1 signing migrated from `elliptic` to `@noble/secp256k1`, removing the remaining `elliptic` audit finding while preserving compressed public keys, compact Low-S signatures, and double-SHA-256 sign/verify behavior.
