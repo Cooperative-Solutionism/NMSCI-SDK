@@ -100,7 +100,6 @@ describe('current backend API contracts', () => {
           centralSignaturePre: 'pre',
           confirmTimestamp: 123,
           centralSignature: 'signature',
-          rawBytes: 'raw',
           txid: 'txid',
         });
       },

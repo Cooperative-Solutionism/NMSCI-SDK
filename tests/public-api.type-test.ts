@@ -9,12 +9,16 @@ import {
   type BlockInfo,
   type BlockInfoRaw,
   type CentralPubkeyEmpowerMsg,
+  type CentralPubkeyEmpowerMsgRaw,
   type CentralPubkeyLockedMsg,
+  type CentralPubkeyLockedMsgRaw,
   type ConsumeChainEdge,
   type ConsumeChainEdgeListResponse,
   type ConsumeChainEdgeQuery,
   type ConsumeChainEdgeRaw,
   type FlowNodeLockedMsg,
+  type FlowNodeLockedMsgRaw,
+  type FlowNodeRegisterMsgRaw,
   type LockedMessageResponseDTO,
   type ReturningFlowRateResponse,
   type SliceResponseDTO,
@@ -22,7 +26,9 @@ import {
   type SystemParamsDTO,
   type SystemStatusDTO,
   type TransactionMountMsg,
+  type TransactionMountMsgRaw,
   type TransactionRecordMsg,
+  type TransactionRecordMsgRaw,
 } from '../src';
 
 declare const client: ApiClient;
@@ -31,6 +37,12 @@ declare const uuidA: string;
 declare const uuidB: string;
 declare const pubkeyA: string;
 declare const pubkeyB: string;
+declare const flowNodeRegisterRaw: FlowNodeRegisterMsgRaw;
+declare const centralPubkeyEmpowerRaw: CentralPubkeyEmpowerMsgRaw;
+declare const centralPubkeyLockedRaw: CentralPubkeyLockedMsgRaw;
+declare const flowNodeLockedRaw: FlowNodeLockedMsgRaw;
+declare const transactionRecordRaw: TransactionRecordMsgRaw;
+declare const transactionMountRaw: TransactionMountMsgRaw;
 
 expectTypeOf<ReturnType<typeof client.getRaw>>().toEqualTypeOf<Promise<Response>>();
 expectTypeOf<ReturnType<typeof client.download>>().toEqualTypeOf<Promise<ArrayBuffer>>();
@@ -95,6 +107,20 @@ expectTypeOf<ReturnType<typeof sdk.normalized.system.getStatus>>().toEqualTypeOf
 expectTypeOf<ReturnType<typeof sdk.normalized.system.getStorage>>().toEqualTypeOf<
   Promise<ApiResponse<StorageStatusDTO>>
 >();
+
+// Message entities follow docs/API.md: rawBytes is an internal backend cache and is not serialized.
+// @ts-expect-error rawBytes is not part of FlowNodeRegisterMsgRaw.
+void flowNodeRegisterRaw.rawBytes;
+// @ts-expect-error rawBytes is not part of CentralPubkeyEmpowerMsgRaw.
+void centralPubkeyEmpowerRaw.rawBytes;
+// @ts-expect-error rawBytes is not part of CentralPubkeyLockedMsgRaw.
+void centralPubkeyLockedRaw.rawBytes;
+// @ts-expect-error rawBytes is not part of FlowNodeLockedMsgRaw.
+void flowNodeLockedRaw.rawBytes;
+// @ts-expect-error rawBytes is not part of TransactionRecordMsgRaw.
+void transactionRecordRaw.rawBytes;
+// @ts-expect-error rawBytes is not part of TransactionMountMsgRaw.
+void transactionMountRaw.rawBytes;
 
 // @ts-expect-error targetId or targetPubkey is required.
 void getConsumeChainEdges(client, {});

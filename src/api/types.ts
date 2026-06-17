@@ -34,7 +34,6 @@ export interface FlowNodeRegisterMsgRaw {
   nonce: number;
   flowNodePubkey: Pubkey;
   flowNodeSignature: Signature;
-  rawBytes: HexString;
   txid: HexString;
 }
 
@@ -48,7 +47,6 @@ export interface CentralPubkeyEmpowerMsgRaw {
   flowNodeSignature: Signature;
   confirmTimestamp: number;
   centralSignature: Signature;
-  rawBytes: HexString;
   txid: HexString;
 }
 
@@ -63,7 +61,6 @@ export interface CentralPubkeyLockedMsgRaw {
   centralSignaturePre: Signature;
   confirmTimestamp: number;
   centralSignature: Signature;
-  rawBytes: HexString;
   txid: HexString;
 }
 
@@ -79,7 +76,6 @@ export interface FlowNodeLockedMsgRaw {
   flowNodeSignature: Signature;
   confirmTimestamp: number;
   centralSignature: Signature;
-  rawBytes: HexString;
   txid: HexString;
 }
 
@@ -101,7 +97,6 @@ export interface TransactionRecordMsgRaw {
   flowNodeSignature: Signature;
   confirmTimestamp: number;
   centralSignature: Signature;
-  rawBytes: HexString;
   txid: HexString;
 }
 
@@ -123,7 +118,6 @@ export interface TransactionMountMsgRaw {
   flowNodeSignature: Signature;
   confirmTimestamp: number;
   centralSignature: Signature;
-  rawBytes: HexString;
   txid: HexString;
 }
 

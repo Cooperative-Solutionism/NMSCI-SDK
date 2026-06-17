@@ -90,7 +90,7 @@ const res = await client.postBinary('/flow-node-registrations', bytes);
 | 4 | 交易记录信息 | 335 | 263 |
 | 5 | 交易挂载信息 | 341 | 269 |
 
-协议完整消息包含 `confirmTimestamp` 和 `centralSignature`，用于后端存储、区块固定、`rawBytes` 和 `txid`。客户端 POST `/send` 时发送的是提交载荷，后端会补齐中心时间戳和中心签名；因此交易记录的完整消息是 335 字节，但发送给当前后端的是 263 字节。
+协议完整消息包含 `confirmTimestamp` 和 `centralSignature`，用于后端存储、区块固定与 `txid` 计算；`rawBytes` 是后端内部缓存，不会在 HTTP 响应中输出。客户端 POST 消息资源时发送的是提交载荷，后端会补齐中心时间戳和中心签名；因此交易记录的完整消息是 335 字节，但发送给当前后端的是 263 字节。
 
 ### 货币类型
 
@@ -231,7 +231,7 @@ import { MSG_SPECS } from '@nmsci/sdk/protocol';
 
 - `sendCentralPubkeyLockedMsg` 从 `Promise<void>` 改为 `Promise<ApiResponse<CentralPubkeyLockedMsgRaw>>`，成功后可读取后端补齐的落库实体。
 - `getConsumeChainEdges` 从 `ApiResponse<ConsumeChainEdgeRaw[]>` 改为 `ApiResponse<SliceResponseDTO<ConsumeChainEdgeRaw>>`。迁移时把 `response.data.map(...)` 改为 `response.data.content.map(...)`，并根据 `hasNext` 翻页。
-- `BlockInfoRaw` 不再包含 `rawBytes` 字段；后端 `BlockInfo` 响应不输出该字段。
+- `BlockInfoRaw` 和 6 类协议消息 Raw DTO 不再包含 `rawBytes` 字段；后端 HTTP 响应不输出该内部缓存字段。
 
 ---
 
@@ -417,7 +417,7 @@ const fullPayload = buildCentralPubkeyEmpowerFullPayload({
 msg.centralSignature = toHex(await signData(fullPayload, centralPrivateKey)) as Signature;
 
 await client.postBinary('/central-pubkey-empowerments', serializeCentralPubkeyEmpowerSubmitPayload(msg));
-const fullBytes = serializeCentralPubkeyEmpowerFullMessage(msg); // 220 字节，用于校验后端 rawBytes
+const fullBytes = serializeCentralPubkeyEmpowerFullMessage(msg); // 220 字节，用于本地校验完整消息字节/txid
 ```
 
 ### 中心公钥冻结（消息类型 2，完整 187 字节，提交 115 字节）
@@ -451,7 +451,7 @@ const fullPayload = buildCentralPubkeyLockedFullPayload({
 msg.centralSignature = toHex(await signData(fullPayload, centralPrivateKey)) as Signature;
 
 const res = await client.postBinary('/central-pubkey-locks', serializeCentralPubkeyLockedSubmitPayload(msg));
-const fullBytes = serializeCentralPubkeyLockedFullMessage(msg); // 187 字节，用于校验后端 rawBytes
+const fullBytes = serializeCentralPubkeyLockedFullMessage(msg); // 187 字节，用于本地校验完整消息字节/txid
 // res.data 为后端补齐 confirmTimestamp/centralSignature 后的落库实体
 ```
 
@@ -489,7 +489,7 @@ const fullPayload = buildFlowNodeLockedFullPayload({
 msg.centralSignature = toHex(await signData(fullPayload, centralPrivateKey)) as Signature;
 
 await client.postBinary('/flow-node-locks', serializeFlowNodeLockedSubmitPayload(msg));
-const fullBytes = serializeFlowNodeLockedFullMessage(msg); // 220 字节，用于校验后端 rawBytes
+const fullBytes = serializeFlowNodeLockedFullMessage(msg); // 220 字节，用于本地校验完整消息字节/txid
 ```
 
 ### 交易记录（消息类型 4，完整 335 字节，提交 263 字节）
@@ -577,7 +577,7 @@ const msg = {
 };
 
 await client.postBinary('/transaction-records', serializeTransactionRecordSubmitPayload(msg));
-const fullBytes = serializeTransactionRecordFullMessage(msg); // 335 字节，用于校验后端 rawBytes
+const fullBytes = serializeTransactionRecordFullMessage(msg); // 335 字节，用于本地校验完整消息字节/txid
 ```
 
 ### 交易挂载（消息类型 5，完整 341 字节，提交 269 字节）
@@ -649,7 +649,7 @@ const msg = {
 };
 
 await client.postBinary('/transaction-mounts', serializeTransactionMountSubmitPayload(msg));
-const fullBytes = serializeTransactionMountFullMessage(msg); // 341 字节，用于校验后端 rawBytes
+const fullBytes = serializeTransactionMountFullMessage(msg); // 341 字节，用于本地校验完整消息字节/txid
 ```
 
 ---

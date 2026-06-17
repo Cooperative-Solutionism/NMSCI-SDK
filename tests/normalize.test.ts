@@ -33,7 +33,6 @@ describe('API DTO normalization', () => {
       flowNodeSignature: signature,
       confirmTimestamp: 1_700_000_000_000_000,
       centralSignature: signature,
-      rawBytes: '00',
       txid: '11',
     };
 
@@ -127,7 +126,6 @@ describe('API DTO normalization', () => {
       flowNodeSignature: signature,
       confirmTimestamp: 1,
       centralSignature: signature,
-      rawBytes: '00',
       txid: '11',
     })).toThrow(/MAX_SAFE_INTEGER/);
   });

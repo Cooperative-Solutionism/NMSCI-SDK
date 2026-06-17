@@ -19,7 +19,7 @@
   ```
 
 - `sendCentralPubkeyLockedMsg()` now resolves to `ApiResponse<CentralPubkeyLockedMsgRaw>` instead of `void`.
-- `BlockInfoRaw.rawBytes` was removed because backend `BlockInfo` does not output `rawBytes`.
+- `BlockInfoRaw.rawBytes` and message DTO `rawBytes` fields were removed because backend HTTP responses do not output the internal raw-byte cache.
 
 ### Added
 

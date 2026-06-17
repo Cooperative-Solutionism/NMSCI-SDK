@@ -92,7 +92,6 @@ function transactionRecordRaw(overrides: Partial<TransactionRecordMsgRaw> = {}):
     flowNodeSignature: signature,
     confirmTimestamp: 1_700_000_000_000_000,
     centralSignature: signature,
-    rawBytes: '00',
     txid: '11',
     ...overrides,
   };
@@ -123,7 +122,6 @@ function flowNodeLockedRaw(overrides: Partial<FlowNodeLockedMsgRaw> = {}): FlowN
     flowNodeSignature: signature,
     confirmTimestamp: 400,
     centralSignature: signature,
-    rawBytes: '00',
     txid: '22',
     ...overrides,
   };
@@ -140,7 +138,6 @@ function centralPubkeyEmpowerRaw(
     flowNodeSignature: signature,
     confirmTimestamp: 500,
     centralSignature: signature,
-    rawBytes: '00',
     txid: '33',
     ...overrides,
   };
@@ -156,7 +153,6 @@ function centralPubkeyLockedRaw(
     centralSignaturePre: signature,
     confirmTimestamp: 600,
     centralSignature: signature,
-    rawBytes: '00',
     txid: '44',
     ...overrides,
   };
@@ -176,7 +172,6 @@ function transactionMountRaw(overrides: Partial<TransactionMountMsgRaw> = {}): T
     flowNodeSignature: signature,
     confirmTimestamp: 700,
     centralSignature: signature,
-    rawBytes: '00',
     txid: '55',
     ...overrides,
   };
