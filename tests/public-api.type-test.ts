@@ -5,6 +5,7 @@ import {
   getConsumeChainEdges,
   getReturningFlowRateById,
   getReturningFlowRateByPubkey,
+  verifyChain,
   type ApiResponse,
   type BlockInfo,
   type BlockInfoRaw,
@@ -29,6 +30,9 @@ import {
   type TransactionMountMsgRaw,
   type TransactionRecordMsg,
   type TransactionRecordMsgRaw,
+  type ChainVerificationQuery,
+  type ChainVerificationSummaryDTO,
+  type ChainVerificationSummaryDTORaw,
 } from '../src';
 
 declare const client: ApiClient;
@@ -107,6 +111,18 @@ expectTypeOf<ReturnType<typeof sdk.normalized.system.getStatus>>().toEqualTypeOf
 expectTypeOf<ReturnType<typeof sdk.normalized.system.getStorage>>().toEqualTypeOf<
   Promise<ApiResponse<StorageStatusDTO>>
 >();
+expectTypeOf<Parameters<typeof verifyChain>[1]>().toEqualTypeOf<ChainVerificationQuery | undefined>();
+expectTypeOf<ReturnType<typeof verifyChain>>().toEqualTypeOf<Promise<ApiResponse<ChainVerificationSummaryDTORaw>>>();
+expectTypeOf<ReturnType<typeof sdk.verify.chain>>().toEqualTypeOf<
+  Promise<ApiResponse<ChainVerificationSummaryDTORaw>>
+>();
+expectTypeOf<ReturnType<typeof sdk.normalized.verify.chain>>().toEqualTypeOf<
+  Promise<ApiResponse<ChainVerificationSummaryDTO>>
+>();
+
+void verifyChain(client);
+void verifyChain(client, { stateful: false });
+void sdk.verify.chain({ stateful: true });
 
 // Message entities follow docs/API.md: rawBytes is an internal backend cache and is not serialized.
 // @ts-expect-error rawBytes is not part of FlowNodeRegisterMsgRaw.

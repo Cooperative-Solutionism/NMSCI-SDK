@@ -16,6 +16,7 @@ import {
   normalizeLockedMessageResponseDTO,
   normalizeReturningFlowRateResponseDTO,
 } from '../src';
+import * as publicApi from '../src';
 import type {
   ApiResponse,
   CentralPubkeyLockedMsgRaw,
@@ -258,6 +259,42 @@ describe('current backend API contracts', () => {
     expect(requested).toEqual([
       `https://example.test/flow-nodes/${flowPubkey}`,
       `https://example.test/flow-nodes/${consumePubkey}`,
+    ]);
+  });
+
+  it('exposes chain verification in function and grouped SDK APIs', async () => {
+    const requested: string[] = [];
+    const fetch = async (url: string) => {
+      requested.push(url);
+      return jsonResponse({
+        valid: true,
+        datDirectory: '/data/dat',
+        blockCount: 2,
+        messageCount: 3,
+        passedChecks: 10,
+        failedChecks: 0,
+        skippedChecks: 1,
+        statefulReplayIncluded: false,
+        failureCount: 0,
+        failures: [],
+        configuredCentralPubkeyHex: flowPubkey,
+        runningSourceCodeZipHash: 'aa'.repeat(32),
+      });
+    };
+    const client = new ApiClient({ baseUrl: 'https://example.test', fetch });
+    const sdk = new NmsciSdk(client);
+    const verifyChain = (publicApi as Record<string, unknown>).verifyChain as
+      | ((client: ApiClient, query?: { stateful?: boolean }) => Promise<ApiResponse<unknown>>)
+      | undefined;
+
+    expect(typeof verifyChain).toBe('function');
+    const response = await verifyChain!(client, { stateful: false });
+    await sdk.verify.chain({ stateful: true });
+
+    expect(response.data).toMatchObject({ valid: true, blockCount: 2 });
+    expect(requested).toEqual([
+      'https://example.test/verify/chain?stateful=false',
+      'https://example.test/verify/chain?stateful=true',
     ]);
   });
 });

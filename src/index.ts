@@ -51,6 +51,10 @@ export type {
   SystemStatusDTO,
   StorageStatusDTORaw,
   StorageStatusDTO,
+  ChainVerificationQuery,
+  ChainVerificationFailureItemDTO,
+  ChainVerificationSummaryDTORaw,
+  ChainVerificationSummaryDTO,
   MsgTypeMetadataDTO,
   CurrencyTypeMetadataDTO,
   BlockFormatMetadataDTO,
@@ -71,4 +75,5 @@ export * from './api/block.api';
 export * from './api/consume-chain.api';
 export * from './api/returning-flow-rate.api';
 export * from './api/system.api';
+export * from './api/verify.api';
 export * from './api/metadata.api';

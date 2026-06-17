@@ -55,6 +55,14 @@
       "sdkGroups": ["system.getStorage"]
     },
     {
+      "id": "verify.chain",
+      "method": "GET",
+      "path": "/verify/chain",
+      "envelope": "response-result",
+      "sdkFunctions": ["verifyChain"],
+      "sdkGroups": ["verify.chain"]
+    },
+    {
       "id": "metadata.getMessageTypes",
       "method": "GET",
       "path": "/metadata/message-types",

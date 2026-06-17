@@ -48,6 +48,7 @@ import {
   normalizeApiResponse,
   normalizeApiResponseSlice,
   normalizeBlockInfo,
+  normalizeChainVerificationSummary,
   normalizeCentralPubkeyEmpowerMsg,
   normalizeCentralPubkeyLockedMsg,
   normalizeConsumeChainEdge,
@@ -86,6 +87,7 @@ import {
   searchTransactionRecordMsgs,
   sendTransactionRecordMsg,
 } from './api/transaction-record.api';
+import { verifyChain } from './api/verify.api';
 
 export class NmsciSdk {
   readonly client: ApiClient;
@@ -215,6 +217,10 @@ export class NmsciSdk {
     getParams: () => getSystemParams(this.client),
     getStatus: () => getSystemStatus(this.client),
     getStorage: () => getSystemStorage(this.client),
+  };
+
+  readonly verify = {
+    chain: (query?: Parameters<typeof verifyChain>[1]) => verifyChain(this.client, query),
   };
 
   readonly metadata = {
@@ -397,6 +403,10 @@ export class NmsciSdk {
       getParams: async () => normalizeApiResponse(await getSystemParams(this.client), normalizeSystemParams),
       getStatus: async () => normalizeApiResponse(await getSystemStatus(this.client), normalizeSystemStatus),
       getStorage: async () => normalizeApiResponse(await getSystemStorage(this.client), normalizeStorageStatus),
+    },
+    verify: {
+      chain: async (query?: Parameters<typeof verifyChain>[1]) =>
+        normalizeApiResponse(await verifyChain(this.client, query), normalizeChainVerificationSummary),
     },
   };
 

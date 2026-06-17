@@ -2,6 +2,8 @@ import type { ApiResponse } from './client';
 import type {
   BlockInfo,
   BlockInfoRaw,
+  ChainVerificationSummaryDTO,
+  ChainVerificationSummaryDTORaw,
   CentralPubkeyEmpowerMsg,
   CentralPubkeyEmpowerMsgRaw,
   CentralPubkeyLockedMsg,
@@ -176,6 +178,18 @@ export function normalizeStorageStatus(raw: StorageStatusDTORaw): StorageStatusD
     currentDatFileSizeBytes: toSafeBigInt(raw.currentDatFileSizeBytes, 'StorageStatusDTO.currentDatFileSizeBytes'),
     totalDatBytes: toSafeBigInt(raw.totalDatBytes, 'StorageStatusDTO.totalDatBytes'),
     datMaxSizePerFileBytes: toSafeBigInt(raw.datMaxSizePerFileBytes, 'StorageStatusDTO.datMaxSizePerFileBytes'),
+  };
+}
+
+export function normalizeChainVerificationSummary(
+  raw: ChainVerificationSummaryDTORaw,
+): ChainVerificationSummaryDTO {
+  return {
+    ...raw,
+    messageCount: toSafeBigInt(raw.messageCount, 'ChainVerificationSummaryDTO.messageCount'),
+    passedChecks: toSafeBigInt(raw.passedChecks, 'ChainVerificationSummaryDTO.passedChecks'),
+    failedChecks: toSafeBigInt(raw.failedChecks, 'ChainVerificationSummaryDTO.failedChecks'),
+    skippedChecks: toSafeBigInt(raw.skippedChecks, 'ChainVerificationSummaryDTO.skippedChecks'),
   };
 }
 

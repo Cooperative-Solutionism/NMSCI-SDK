@@ -23,6 +23,7 @@
 
 ### Added
 
+- `verifyChain()` and `NmsciSdk.verify.chain()` for the documented `GET /verify/chain` chain-integrity self-check endpoint.
 - Message collection-root helpers for documented slice-backed endpoints.
 - Grouped `.list(...)` helpers for message collections.
 - Runtime validation for clearly invalid SDK query inputs.

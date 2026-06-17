@@ -215,6 +215,7 @@ await sdk.centralPubkeyLocked.list({ page: 0, size: 50 });
 await sdk.flowNode.getState(flowNodePubkey);
 await sdk.transactionRecord.getByFlowNodePubkey(flowNodePubkey, { page: 0, size: 50 });
 await sdk.returningFlowRate.getByPubkey({ targetPubkey: flowNodePubkey, currencyType: 1 });
+await sdk.verify.chain({ stateful: false });
 ```
 
 也可以按子路径导入：
@@ -872,6 +873,15 @@ getSystemStatus(client): Promise<ApiResponse<SystemStatusDTORaw>>
 // .dat 存储用量（目录、文件数、当前文件大小、总字节、单文件上限、利用率）
 getSystemStorage(client): Promise<ApiResponse<StorageStatusDTORaw>>
 ```
+
+### 链验证
+
+```typescript
+// 重新解析本节点落盘 blk*.dat 并独立核验链完整性；stateful 默认 true
+verifyChain(client, query?: { stateful?: boolean }): Promise<ApiResponse<ChainVerificationSummaryDTORaw>>
+```
+
+`ChainVerificationSummaryDTORaw` 的 `messageCount`、`passedChecks`、`failedChecks`、`skippedChecks` 是 64 位计数字段；如需 bigint，使用 `normalizeChainVerificationSummary` 或 `sdk.normalized.verify.chain(...)`。
 
 ### 元数据
 

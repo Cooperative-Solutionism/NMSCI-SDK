@@ -11,6 +11,7 @@ import type {
   StorageStatusDTORaw,
   SystemParamsDTORaw,
   SystemStatusDTORaw,
+  ChainVerificationSummaryDTORaw,
   TransactionMountMsgRaw,
   TransactionRecordMsgRaw,
 } from '../src';
@@ -218,6 +219,26 @@ function storageStatusRaw(overrides: Partial<StorageStatusDTORaw> = {}): Storage
   };
 }
 
+function chainVerificationRaw(
+  overrides: Partial<ChainVerificationSummaryDTORaw> = {},
+): ChainVerificationSummaryDTORaw {
+  return {
+    valid: true,
+    datDirectory: '/data/dat',
+    blockCount: 2,
+    messageCount: 3,
+    passedChecks: 10,
+    failedChecks: 0,
+    skippedChecks: 1,
+    statefulReplayIncluded: false,
+    failureCount: 0,
+    failures: [],
+    configuredCentralPubkeyHex: pubkey,
+    runningSourceCodeZipHash: 'aa'.repeat(32),
+    ...overrides,
+  };
+}
+
 describe('NmsciSdk normalized API', () => {
   it('normalizes block bigint fields while preserving the response envelope', async () => {
     const { sdk, requested } = createSdk({
@@ -359,6 +380,22 @@ describe('NmsciSdk normalized API', () => {
       'https://example.test/system/status',
       'https://example.test/system/storage',
     ]);
+  });
+
+  it('normalizes chain verification count fields', async () => {
+    const { sdk, requested } = createSdk({
+      '/verify/chain': chainVerificationRaw({ messageCount: 42, passedChecks: 40, failedChecks: 1, skippedChecks: 1 }),
+    });
+
+    const response = await sdk.normalized.verify.chain({ stateful: false });
+
+    expect(response.data.messageCount).toBe(42n);
+    expect(response.data.passedChecks).toBe(40n);
+    expect(response.data.failedChecks).toBe(1n);
+    expect(response.data.skippedChecks).toBe(1n);
+    expect(response.data.blockCount).toBe(2);
+    const url = expectRequestedUrl(requested[0]!, '/verify/chain');
+    expect(url.searchParams.get('stateful')).toBe('false');
   });
 
   it('rejects unsafe integer data during normalized SDK calls', async () => {

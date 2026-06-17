@@ -51,10 +51,11 @@ describe('machine-readable backend API contract', () => {
       repository: 'NMSCI',
       document: 'docs/API.md',
     });
-    expect(contract.endpoints).toHaveLength(38);
+    expect(contract.endpoints).toHaveLength(39);
     expect(uniqueOperations.size).toBe(contract.endpoints.length);
-    expect(contract.endpoints.filter(endpoint => endpoint.envelope === 'response-result')).toHaveLength(36);
+    expect(contract.endpoints.filter(endpoint => endpoint.envelope === 'response-result')).toHaveLength(37);
     expect(contract.endpoints.filter(endpoint => endpoint.envelope === 'raw-static')).toHaveLength(2);
+    expect(contract.endpoints.map(endpoint => endpoint.id)).toContain('verify.chain');
   });
 
   it('maps every ResponseResult endpoint to SDK helpers', () => {

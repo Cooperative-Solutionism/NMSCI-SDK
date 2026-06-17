@@ -266,6 +266,41 @@ export interface StorageStatusDTO
   datMaxSizePerFileBytes: bigint;
 }
 
+export interface ChainVerificationQuery {
+  [key: string]: string | number | boolean | undefined;
+  stateful?: boolean;
+}
+
+export interface ChainVerificationFailureItemDTO {
+  scope: string;
+  name: string;
+  category: string;
+  detail: string;
+}
+
+export interface ChainVerificationSummaryDTORaw {
+  valid: boolean;
+  datDirectory: string;
+  blockCount: number;
+  messageCount: number;
+  passedChecks: number;
+  failedChecks: number;
+  skippedChecks: number;
+  statefulReplayIncluded: boolean;
+  failureCount: number;
+  failures: ChainVerificationFailureItemDTO[];
+  configuredCentralPubkeyHex: HexString;
+  runningSourceCodeZipHash: HexString;
+}
+
+export interface ChainVerificationSummaryDTO
+  extends Omit<ChainVerificationSummaryDTORaw, 'messageCount' | 'passedChecks' | 'failedChecks' | 'skippedChecks'> {
+  messageCount: bigint;
+  passedChecks: bigint;
+  failedChecks: bigint;
+  skippedChecks: bigint;
+}
+
 export interface MsgTypeMetadataDTO {
   code: string;
   value: number;
