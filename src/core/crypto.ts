@@ -1,8 +1,16 @@
-import { getPublicKey as derivePublicKey, Point, signAsync, verify } from '@noble/secp256k1';
-import { fromHex, toHex, pubkeyToBytes, signatureToBytes } from './encoding';
-import { doubleSha256, doubleSha256Hex } from './hash';
+import { etc, getPublicKey as derivePublicKey, Point, signAsync, verify } from '@noble/secp256k1';
+import { concat, fromHex, toHex, pubkeyToBytes, signatureToBytes } from './encoding';
+import { doubleSha256, doubleSha256Hex, getSubtleCrypto } from './hash';
 
 const CURVE_ORDER = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
+
+etc.hmacSha256Async = async (key, ...msgs) => {
+  const subtle = await getSubtleCrypto();
+  const cryptoKey = await subtle.importKey('raw', key as BufferSource, { name: 'HMAC', hash: 'SHA-256' }, false, [
+    'sign',
+  ]);
+  return new Uint8Array(await subtle.sign('HMAC', cryptoKey, concat(...msgs) as BufferSource));
+};
 
 function privateKeyToBytes(privateKeyHex: string, requireFullLength = true): Uint8Array {
   const clean = privateKeyHex.replace(/^0x/, '');

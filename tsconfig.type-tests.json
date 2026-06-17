@@ -8,7 +8,7 @@
     "sourceMap": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "types": ["vitest"]
+    "types": ["vitest", "node"]
   },
   "include": ["src/**/*.d.ts", "tests/**/*.type-test.ts"]
 }

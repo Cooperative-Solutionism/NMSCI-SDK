@@ -1,5 +1,5 @@
 import { ApiClient, ApiResponse } from './client';
-import { validateRequiredHexString } from './query-validation';
+import { validateNonNegativeInteger, validateRequiredHexString } from './query-validation';
 import type { BlockInfoRaw } from './types';
 
 export type BlockInfoResponse = ApiResponse<BlockInfoRaw>;
@@ -9,6 +9,7 @@ export async function getLastBlock(client: ApiClient): Promise<ApiResponse<Block
 }
 
 export async function getBlockByHeight(client: ApiClient, height: number): Promise<ApiResponse<BlockInfoRaw>> {
+  validateNonNegativeInteger(height, 'height');
   return client.get<BlockInfoRaw>(`/blocks/${height}`);
 }
 

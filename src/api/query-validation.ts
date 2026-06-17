@@ -57,6 +57,12 @@ export function validateRequiredHexString(
   validateHexString(value, fieldName, expectedBytes);
 }
 
+export function validateNonNegativeInteger(value: number | undefined, fieldName: string): void {
+  if (value === undefined || !Number.isInteger(value) || value < 0) {
+    throw new Error(`${fieldName} must be an integer >= 0`);
+  }
+}
+
 export function validateCompressedPubkey(value: string | undefined, fieldName: string): void {
   if (value !== undefined && !COMPRESSED_PUBKEY_PATTERN.test(value)) {
     throw new Error(`${fieldName} must be a 33-byte compressed public key hex string`);

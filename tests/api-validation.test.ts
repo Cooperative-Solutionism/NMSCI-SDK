@@ -8,6 +8,7 @@ import {
   getConsumeChainByStart,
   getConsumeChainEdges,
   getBlockByHash,
+  getBlockByHeight,
   getCentralPubkeyLockedMsgByCentralPubkey,
   getFlowNodeLockedMsgByFlowNodePubkey,
   getFlowNodeRegisterMsgByFlowNodePubkey,
@@ -378,6 +379,22 @@ describe('remaining API helper query validation', () => {
     await expect(getBlockByHash(client, 'abc')).rejects.toThrow(
       /hash must be a 32-byte hex string/,
     );
+  });
+
+  it('rejects invalid block heights before calling fetch', async () => {
+    const counted = createCountingClient();
+
+    await expect(getBlockByHeight(counted.client, -1)).rejects.toThrow(
+      /height must be an integer >= 0/,
+    );
+    await expect(getBlockByHeight(counted.client, 1.5)).rejects.toThrow(
+      /height must be an integer >= 0/,
+    );
+    await expect(getBlockByHeight(counted.client, Number.NaN)).rejects.toThrow(
+      /height must be an integer >= 0/,
+    );
+
+    expect(counted.fetchCount()).toBe(0);
   });
 
   it('rejects transaction-record filters hidden in pagination before calling fetch', async () => {

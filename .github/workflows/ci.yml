@@ -50,3 +50,31 @@ jobs:
 
       - name: Pack smoke test
         run: npm run test:pack:prepared
+
+  runtime-smoke:
+    name: Runtime smoke Node ${{ matrix.node-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version:
+          - 18.x
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Pack smoke test
+        run: npm run test:pack:prepared

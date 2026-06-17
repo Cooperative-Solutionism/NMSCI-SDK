@@ -66,6 +66,12 @@ describe('release and CI command contracts', () => {
 
   it('keeps CI validation-only and avoids duplicate build work', () => {
     expect(normalizedCiWorkflow).toContain("on:\n  push:\n    branches:\n      - '**'\n  pull_request:");
+    expect(normalizedCiWorkflow).toContain("matrix:\n        node-version:\n          - 20.x\n          - 22.x");
+    expect(normalizedCiWorkflow).toContain("  runtime-smoke:\n    name: Runtime smoke Node ${{ matrix.node-version }}");
+    expect(normalizedCiWorkflow).toContain("matrix:\n        node-version:\n          - 18.x");
+    expect(normalizedCiWorkflow).toContain(
+      "      - name: Install dependencies\n        run: npm ci\n\n      - name: Build\n        run: npm run build\n\n      - name: Pack smoke test\n        run: npm run test:pack:prepared",
+    );
     expect(normalizedCiWorkflow).not.toMatch(/^\s*tags(?:-ignore)?:/m);
     expect(normalizedCiWorkflow).not.toMatch(/^\s*run:\s*npm run test:pack\s*$/m);
     expectNoWorkflowContains([
