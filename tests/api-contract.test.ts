@@ -297,6 +297,94 @@ describe('current backend API contracts', () => {
       'https://example.test/verify/chain?stateful=true',
     ]);
   });
+
+  it('exposes Actuator endpoints as non-ResponseResult JSON and text helpers', async () => {
+    const requested: string[] = [];
+    const fetch = async (url: string) => {
+      requested.push(url);
+      const pathname = new URL(url).pathname;
+      if (pathname === '/actuator/prometheus') {
+        return new Response('nmsci_blocks_pending 3\n', {
+          status: 200,
+          headers: { 'Content-Type': 'text/plain; version=0.0.4' },
+        });
+      }
+      if (pathname.startsWith('/actuator/metrics/')) {
+        const name = decodeURIComponent(pathname.slice('/actuator/metrics/'.length));
+        return new Response(JSON.stringify({
+          name,
+          description: `${name} metric`,
+          baseUnit: 'seconds',
+          measurements: [{ statistic: 'COUNT', value: 2 }],
+          availableTags: [{ tag: 'application', values: ['nmsci'] }],
+        }), { status: 200 });
+      }
+      if (pathname === '/actuator/metrics') {
+        return new Response(JSON.stringify({ names: ['http.server.requests', 'jvm.memory.used'] }), { status: 200 });
+      }
+      if (pathname === '/actuator/info') {
+        return new Response(JSON.stringify({ app: { name: 'nmsci' } }), { status: 200 });
+      }
+      if (pathname === '/actuator/health') {
+        return new Response(JSON.stringify({ status: 'UP' }), { status: 200 });
+      }
+      return new Response('missing', { status: 404 });
+    };
+    const client = new ApiClient({ baseUrl: 'https://example.test', fetch });
+    const sdk = new NmsciSdk(client) as NmsciSdk & {
+      actuator: {
+        health: () => Promise<unknown>;
+        info: () => Promise<unknown>;
+        metrics: () => Promise<unknown>;
+        metric: (name: string) => Promise<unknown>;
+        prometheus: () => Promise<string>;
+      };
+    };
+    const getActuatorHealth = (publicApi as Record<string, unknown>).getActuatorHealth as
+      | ((client: ApiClient) => Promise<Record<string, unknown>>)
+      | undefined;
+    const getActuatorInfo = (publicApi as Record<string, unknown>).getActuatorInfo as
+      | ((client: ApiClient) => Promise<Record<string, unknown>>)
+      | undefined;
+    const getActuatorMetrics = (publicApi as Record<string, unknown>).getActuatorMetrics as
+      | ((client: ApiClient) => Promise<{ names: string[] }>)
+      | undefined;
+    const getActuatorMetric = (publicApi as Record<string, unknown>).getActuatorMetric as
+      | ((client: ApiClient, name: string) => Promise<{ name: string }>)
+      | undefined;
+    const getActuatorPrometheus = (publicApi as Record<string, unknown>).getActuatorPrometheus as
+      | ((client: ApiClient) => Promise<string>)
+      | undefined;
+
+    expect(typeof getActuatorHealth).toBe('function');
+    expect(typeof getActuatorInfo).toBe('function');
+    expect(typeof getActuatorMetrics).toBe('function');
+    expect(typeof getActuatorMetric).toBe('function');
+    expect(typeof getActuatorPrometheus).toBe('function');
+
+    const health = await getActuatorHealth!(client);
+    const info = await getActuatorInfo!(client);
+    const metrics = await getActuatorMetrics!(client);
+    const metric = await getActuatorMetric!(client, 'http.server.requests');
+    const prometheus = await getActuatorPrometheus!(client);
+    await sdk.actuator.health();
+    await sdk.actuator.metric('jvm.memory.used');
+
+    expect(health.status).toBe('UP');
+    expect(info.app).toEqual({ name: 'nmsci' });
+    expect(metrics.names).toContain('http.server.requests');
+    expect(metric.name).toBe('http.server.requests');
+    expect(prometheus).toContain('nmsci_blocks_pending');
+    expect(requested).toEqual([
+      'https://example.test/actuator/health',
+      'https://example.test/actuator/info',
+      'https://example.test/actuator/metrics',
+      'https://example.test/actuator/metrics/http.server.requests',
+      'https://example.test/actuator/prometheus',
+      'https://example.test/actuator/health',
+      'https://example.test/actuator/metrics/jvm.memory.used',
+    ]);
+  });
 });
 
 function jsonResponse(data: unknown): Response {

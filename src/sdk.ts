@@ -1,4 +1,11 @@
 import {
+  getActuatorHealth,
+  getActuatorInfo,
+  getActuatorMetric,
+  getActuatorMetrics,
+  getActuatorPrometheus,
+} from './api/actuator.api';
+import {
   getBlockByHash,
   getBlockByHeight,
   getLastBlock,
@@ -190,7 +197,7 @@ export class NmsciSdk {
 
   readonly consumeChain = {
     query: (
-      filters?: Parameters<typeof queryConsumeChains>[1],
+      filters: Parameters<typeof queryConsumeChains>[1],
       pagination?: Parameters<typeof queryConsumeChains>[2],
     ) => queryConsumeChains(this.client, filters, pagination),
     getById: (id: string) => getConsumeChainById(this.client, id),
@@ -221,6 +228,14 @@ export class NmsciSdk {
 
   readonly verify = {
     chain: (query?: Parameters<typeof verifyChain>[1]) => verifyChain(this.client, query),
+  };
+
+  readonly actuator = {
+    health: () => getActuatorHealth(this.client),
+    info: () => getActuatorInfo(this.client),
+    metrics: () => getActuatorMetrics(this.client),
+    metric: (name: string) => getActuatorMetric(this.client, name),
+    prometheus: () => getActuatorPrometheus(this.client),
   };
 
   readonly metadata = {
@@ -366,7 +381,7 @@ export class NmsciSdk {
       getById: async (id: string) =>
         normalizeApiResponse(await getConsumeChainById(this.client, id), normalizeConsumeChainResponseDTO),
       query: async (
-        filters?: Parameters<typeof queryConsumeChains>[1],
+        filters: Parameters<typeof queryConsumeChains>[1],
         pagination?: Parameters<typeof queryConsumeChains>[2],
       ) =>
         normalizeApiResponseSlice(

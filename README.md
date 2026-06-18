@@ -216,6 +216,7 @@ await sdk.flowNode.getState(flowNodePubkey);
 await sdk.transactionRecord.getByFlowNodePubkey(flowNodePubkey, { page: 0, size: 50 });
 await sdk.returningFlowRate.getByPubkey({ targetPubkey: flowNodePubkey, currencyType: 1 });
 await sdk.verify.chain({ stateful: false });
+await sdk.actuator.health();
 ```
 
 也可以按子路径导入：
@@ -227,6 +228,8 @@ import { MSG_SPECS } from '@nmsci/sdk/protocol';
 ```
 
 ### Breaking changes / migration
+
+- `queryConsumeChains` now requires one query selector: exactly one of `startId` / `endId` / `nodeId` / `startPubkey` / `endPubkey` / `nodePubkey`, or `mountedTransactionId`.
 
 本版本跟随后端 API 合同调整，建议按 major 版本发布：
 
@@ -806,11 +809,8 @@ getConsumeChainById(client, id: string): Promise<ApiResponse<ConsumeChainRespons
 
 // 集合根（分页）：id 模式（startId/endId/nodeId）与 pubkey 模式（startPubkey/endPubkey/nodePubkey）
 // 不可混用，混用后端返回 400
-queryConsumeChains(client, filters?: {
-  startId?: string; endId?: string; nodeId?: string;
-  startPubkey?: string; endPubkey?: string; nodePubkey?: string;
-  isLoop?: boolean; mountedTransactionId?: string;
-}, pagination?: PageQuery): Promise<ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>>
+// Requires exactly one selector, or mountedTransactionId.
+queryConsumeChains(client, filters: ConsumeChainQueryFilters, pagination?: PaginationQuery): Promise<ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>>
 
 // 便捷封装（均走集合根；startId/endId/nodeId 为流转节点 UUID）
 getConsumeChainByStart(client, startId: string, query?: boolean | ConsumeChainQuery): Promise<ApiResponse<SliceResponseDTO<ConsumeChainResponseDTORaw>>>
@@ -879,6 +879,13 @@ getSystemStorage(client): Promise<ApiResponse<StorageStatusDTORaw>>
 ```typescript
 // 重新解析本节点落盘 blk*.dat 并独立核验链完整性；stateful 默认 true
 verifyChain(client, query?: { stateful?: boolean }): Promise<ApiResponse<ChainVerificationSummaryDTORaw>>
+
+// Actuator endpoints are not wrapped in ApiResponse<ResponseResult<T>>.
+getActuatorHealth(client): Promise<ActuatorHealthDTO>
+getActuatorInfo(client): Promise<ActuatorInfoDTO>
+getActuatorMetrics(client): Promise<ActuatorMetricsDTO>
+getActuatorMetric(client, name: string): Promise<ActuatorMetricDTO>
+getActuatorPrometheus(client): Promise<string>
 ```
 
 `ChainVerificationSummaryDTORaw` 的 `messageCount`、`passedChecks`、`failedChecks`、`skippedChecks` 是 64 位计数字段；如需 bigint，使用 `normalizeChainVerificationSummary` 或 `sdk.normalized.verify.chain(...)`。

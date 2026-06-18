@@ -63,6 +63,46 @@
       "sdkGroups": ["verify.chain"]
     },
     {
+      "id": "actuator.health",
+      "method": "GET",
+      "path": "/actuator/health",
+      "envelope": "actuator-json",
+      "sdkFunctions": ["getActuatorHealth"],
+      "sdkGroups": ["actuator.health"]
+    },
+    {
+      "id": "actuator.info",
+      "method": "GET",
+      "path": "/actuator/info",
+      "envelope": "actuator-json",
+      "sdkFunctions": ["getActuatorInfo"],
+      "sdkGroups": ["actuator.info"]
+    },
+    {
+      "id": "actuator.metrics",
+      "method": "GET",
+      "path": "/actuator/metrics",
+      "envelope": "actuator-json",
+      "sdkFunctions": ["getActuatorMetrics"],
+      "sdkGroups": ["actuator.metrics"]
+    },
+    {
+      "id": "actuator.metric",
+      "method": "GET",
+      "path": "/actuator/metrics/{name}",
+      "envelope": "actuator-json",
+      "sdkFunctions": ["getActuatorMetric"],
+      "sdkGroups": ["actuator.metric"]
+    },
+    {
+      "id": "actuator.prometheus",
+      "method": "GET",
+      "path": "/actuator/prometheus",
+      "envelope": "actuator-prometheus",
+      "sdkFunctions": ["getActuatorPrometheus"],
+      "sdkGroups": ["actuator.prometheus"]
+    },
+    {
       "id": "metadata.getMessageTypes",
       "method": "GET",
       "path": "/metadata/message-types",

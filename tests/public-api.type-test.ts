@@ -2,7 +2,13 @@ import { expectTypeOf } from 'vitest';
 import {
   ApiClient,
   NmsciSdk,
+  getActuatorHealth,
+  getActuatorInfo,
+  getActuatorMetric,
+  getActuatorMetrics,
+  getActuatorPrometheus,
   getConsumeChainEdges,
+  queryConsumeChains,
   getReturningFlowRateById,
   getReturningFlowRateByPubkey,
   verifyChain,
@@ -33,6 +39,11 @@ import {
   type ChainVerificationQuery,
   type ChainVerificationSummaryDTO,
   type ChainVerificationSummaryDTORaw,
+  type ConsumeChainQueryFilters,
+  type ActuatorHealthDTO,
+  type ActuatorInfoDTO,
+  type ActuatorMetricDTO,
+  type ActuatorMetricsDTO,
 } from '../src';
 
 declare const client: ApiClient;
@@ -70,6 +81,39 @@ const consumeEdgeByPubkey: ConsumeChainEdgeQuery = {
   page: 0,
   size: 50,
 };
+
+const consumeChainByStart: ConsumeChainQueryFilters = {
+  startId: uuidA,
+  isLoop: false,
+  page: 0,
+  size: 50,
+};
+
+const consumeChainByMountedTransaction: ConsumeChainQueryFilters = {
+  mountedTransactionId: uuidA,
+  page: 0,
+  size: 50,
+};
+
+expectTypeOf<Parameters<typeof queryConsumeChains>[1]>().toEqualTypeOf<ConsumeChainQueryFilters>();
+void queryConsumeChains(client, consumeChainByStart);
+void queryConsumeChains(client, consumeChainByMountedTransaction);
+void sdk.consumeChain.query(consumeChainByStart);
+
+// @ts-expect-error consume-chain root queries require one selector.
+void queryConsumeChains(client);
+
+// @ts-expect-error consume-chain node mode accepts exactly one selector.
+void queryConsumeChains(client, { startId: uuidA, endId: uuidB });
+
+// @ts-expect-error mountedTransactionId cannot be combined with node filters.
+void queryConsumeChains(client, { mountedTransactionId: uuidA, nodeId: uuidB });
+
+// @ts-expect-error selector filters cannot be smuggled through the pagination argument.
+void queryConsumeChains(client, { startId: uuidA }, { endId: uuidB });
+
+// @ts-expect-error selector filters cannot be smuggled through grouped SDK pagination.
+void sdk.consumeChain.query({ startId: uuidA }, { nodeId: uuidB });
 
 expectTypeOf<Parameters<typeof getConsumeChainEdges>[1]>().toEqualTypeOf<ConsumeChainEdgeQuery>();
 expectTypeOf<ReturnType<typeof getConsumeChainEdges>>().toEqualTypeOf<Promise<ConsumeChainEdgeListResponse>>();
@@ -119,10 +163,23 @@ expectTypeOf<ReturnType<typeof sdk.verify.chain>>().toEqualTypeOf<
 expectTypeOf<ReturnType<typeof sdk.normalized.verify.chain>>().toEqualTypeOf<
   Promise<ApiResponse<ChainVerificationSummaryDTO>>
 >();
+expectTypeOf<ReturnType<typeof getActuatorHealth>>().toEqualTypeOf<Promise<ActuatorHealthDTO>>();
+expectTypeOf<ReturnType<typeof getActuatorInfo>>().toEqualTypeOf<Promise<ActuatorInfoDTO>>();
+expectTypeOf<ReturnType<typeof getActuatorMetrics>>().toEqualTypeOf<Promise<ActuatorMetricsDTO>>();
+expectTypeOf<ReturnType<typeof getActuatorMetric>>().toEqualTypeOf<Promise<ActuatorMetricDTO>>();
+expectTypeOf<ReturnType<typeof getActuatorPrometheus>>().toEqualTypeOf<Promise<string>>();
+expectTypeOf<ReturnType<typeof sdk.actuator.health>>().toEqualTypeOf<Promise<ActuatorHealthDTO>>();
+expectTypeOf<ReturnType<typeof sdk.actuator.info>>().toEqualTypeOf<Promise<ActuatorInfoDTO>>();
+expectTypeOf<ReturnType<typeof sdk.actuator.metrics>>().toEqualTypeOf<Promise<ActuatorMetricsDTO>>();
+expectTypeOf<ReturnType<typeof sdk.actuator.metric>>().toEqualTypeOf<Promise<ActuatorMetricDTO>>();
+expectTypeOf<ReturnType<typeof sdk.actuator.prometheus>>().toEqualTypeOf<Promise<string>>();
 
 void verifyChain(client);
 void verifyChain(client, { stateful: false });
 void sdk.verify.chain({ stateful: true });
+void getActuatorHealth(client);
+void getActuatorMetric(client, 'http.server.requests');
+void sdk.actuator.prometheus();
 
 // Message entities follow docs/API.md: rawBytes is an internal backend cache and is not serialized.
 // @ts-expect-error rawBytes is not part of FlowNodeRegisterMsgRaw.

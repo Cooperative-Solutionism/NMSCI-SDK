@@ -21,6 +21,7 @@ export type {
   FlowNodeRegisterMsgRaw,
   FlowNodeRegisterMsg,
   PageQuery,
+  PaginationQuery,
   SliceResponseDTO,
   LockedMessageResponseDTO,
   FlowNodeStateResponseDTO,
@@ -55,6 +56,13 @@ export type {
   ChainVerificationFailureItemDTO,
   ChainVerificationSummaryDTORaw,
   ChainVerificationSummaryDTO,
+  ActuatorHealthComponentDTO,
+  ActuatorHealthDTO,
+  ActuatorInfoDTO,
+  ActuatorMetricsDTO,
+  ActuatorMetricMeasurementDTO,
+  ActuatorMetricAvailableTagDTO,
+  ActuatorMetricDTO,
   MsgTypeMetadataDTO,
   CurrencyTypeMetadataDTO,
   BlockFormatMetadataDTO,
@@ -76,4 +84,5 @@ export * from './api/consume-chain.api';
 export * from './api/returning-flow-rate.api';
 export * from './api/system.api';
 export * from './api/verify.api';
+export * from './api/actuator.api';
 export * from './api/metadata.api';

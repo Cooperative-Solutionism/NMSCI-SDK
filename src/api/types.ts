@@ -1,9 +1,12 @@
 import type { Pubkey, Signature, HexString } from '../core/types';
 
-export interface PageQuery {
-  [key: string]: string | number | boolean | undefined;
+export interface PaginationQuery {
   page?: number;
   size?: number;
+}
+
+export interface PageQuery extends PaginationQuery {
+  [key: string]: string | number | boolean | undefined;
 }
 
 export interface SliceResponseDTO<T> {
@@ -299,6 +302,41 @@ export interface ChainVerificationSummaryDTO
   passedChecks: bigint;
   failedChecks: bigint;
   skippedChecks: bigint;
+}
+
+export interface ActuatorHealthComponentDTO {
+  status?: string;
+  details?: Record<string, unknown>;
+  components?: Record<string, ActuatorHealthComponentDTO>;
+}
+
+export interface ActuatorHealthDTO extends ActuatorHealthComponentDTO {
+  status: string;
+  groups?: string[];
+}
+
+export type ActuatorInfoDTO = Record<string, unknown>;
+
+export interface ActuatorMetricsDTO {
+  names: string[];
+}
+
+export interface ActuatorMetricMeasurementDTO {
+  statistic: string;
+  value: number;
+}
+
+export interface ActuatorMetricAvailableTagDTO {
+  tag: string;
+  values: string[];
+}
+
+export interface ActuatorMetricDTO {
+  name: string;
+  description?: string | null;
+  baseUnit?: string | null;
+  measurements: ActuatorMetricMeasurementDTO[];
+  availableTags: ActuatorMetricAvailableTagDTO[];
 }
 
 export interface MsgTypeMetadataDTO {

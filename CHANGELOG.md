@@ -20,10 +20,12 @@
 
 - `sendCentralPubkeyLockedMsg()` now resolves to `ApiResponse<CentralPubkeyLockedMsgRaw>` instead of `void`.
 - `BlockInfoRaw.rawBytes` and message DTO `rawBytes` fields were removed because backend HTTP responses do not output the internal raw-byte cache.
+- `queryConsumeChains()` now requires exactly one documented selector, or `mountedTransactionId`; empty root queries and multiple node selectors are rejected before the request is sent.
 
 ### Added
 
 - `verifyChain()` and `NmsciSdk.verify.chain()` for the documented `GET /verify/chain` chain-integrity self-check endpoint.
+- Actuator observability helpers for `GET /actuator/health`, `/actuator/info`, `/actuator/metrics`, `/actuator/metrics/{name}`, and `/actuator/prometheus`.
 - Message collection-root helpers for documented slice-backed endpoints.
 - Grouped `.list(...)` helpers for message collections.
 - Runtime validation for clearly invalid SDK query inputs.

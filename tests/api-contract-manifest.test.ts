@@ -9,7 +9,7 @@ interface ApiContractEndpoint {
   id: string;
   method: 'GET' | 'POST';
   path: string;
-  envelope: 'response-result' | 'raw-static';
+  envelope: 'response-result' | 'raw-static' | 'actuator-json' | 'actuator-prometheus';
   sdkFunctions: string[];
   sdkGroups: string[];
   clientMethods?: string[];
@@ -51,11 +51,14 @@ describe('machine-readable backend API contract', () => {
       repository: 'NMSCI',
       document: 'docs/API.md',
     });
-    expect(contract.endpoints).toHaveLength(39);
+    expect(contract.endpoints).toHaveLength(44);
     expect(uniqueOperations.size).toBe(contract.endpoints.length);
     expect(contract.endpoints.filter(endpoint => endpoint.envelope === 'response-result')).toHaveLength(37);
     expect(contract.endpoints.filter(endpoint => endpoint.envelope === 'raw-static')).toHaveLength(2);
+    expect(contract.endpoints.filter(endpoint => endpoint.envelope === 'actuator-json')).toHaveLength(4);
+    expect(contract.endpoints.filter(endpoint => endpoint.envelope === 'actuator-prometheus')).toHaveLength(1);
     expect(contract.endpoints.map(endpoint => endpoint.id)).toContain('verify.chain');
+    expect(contract.endpoints.map(endpoint => endpoint.id)).toContain('actuator.prometheus');
   });
 
   it('maps every ResponseResult endpoint to SDK helpers', () => {
@@ -98,6 +101,35 @@ describe('machine-readable backend API contract', () => {
       expect(endpoint.clientMethods, endpoint.id).toEqual(['getRaw', 'download']);
       for (const clientMethod of endpoint.clientMethods || []) {
         expect(typeof readGroupPath(client, clientMethod), `${endpoint.id}: ${clientMethod}`).toBe('function');
+      }
+    }
+  });
+
+  it('maps Actuator resources to non-envelope SDK helpers', () => {
+    const contract = readContract();
+    const actuatorEndpoints = contract.endpoints.filter(endpoint => endpoint.envelope.startsWith('actuator-'));
+    const apiExports = api as Record<string, unknown>;
+    const sdk = new NmsciSdk({
+      baseUrl: 'https://example.test',
+      fetch: async () => new Response(JSON.stringify({ status: 'UP', names: [] }), { status: 200 }),
+    });
+
+    expect(actuatorEndpoints.map(endpoint => `${endpoint.method} ${endpoint.path}`)).toEqual([
+      'GET /actuator/health',
+      'GET /actuator/info',
+      'GET /actuator/metrics',
+      'GET /actuator/metrics/{name}',
+      'GET /actuator/prometheus',
+    ]);
+
+    for (const endpoint of actuatorEndpoints) {
+      expect(endpoint.sdkFunctions, endpoint.id).not.toHaveLength(0);
+      expect(endpoint.sdkGroups, endpoint.id).not.toHaveLength(0);
+      for (const sdkFunction of endpoint.sdkFunctions) {
+        expect(typeof apiExports[sdkFunction], `${endpoint.id}: ${sdkFunction}`).toBe('function');
+      }
+      for (const sdkGroup of endpoint.sdkGroups) {
+        expect(typeof readGroupPath(sdk, sdkGroup), `${endpoint.id}: ${sdkGroup}`).toBe('function');
       }
     }
   });

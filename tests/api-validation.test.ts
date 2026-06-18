@@ -171,6 +171,19 @@ describe('consume-chain query validation', () => {
     expect(counted.fetchCount()).toBe(0);
   });
 
+  it('rejects consume-chain root queries without one documented selector before calling fetch', async () => {
+    const counted = createCountingClient();
+
+    await expect(queryConsumeChains(counted.client, undefined as never)).rejects.toThrow(
+      /consume-chains requires mountedTransactionId or exactly one node filter/,
+    );
+    await expect(queryConsumeChains(counted.client, undefined as never, { page: 0, size: 20 })).rejects.toThrow(
+      /consume-chains requires mountedTransactionId or exactly one node filter/,
+    );
+
+    expect(counted.fetchCount()).toBe(0);
+  });
+
   it('rejects id and pubkey mode mixing in consume-chain root queries', async () => {
     await expect(queryConsumeChains(client, { startId: uuidA, endPubkey: pubkeyA })).rejects.toThrow(
       /consume-chains cannot mix id and pubkey query parameters/,
@@ -178,6 +191,19 @@ describe('consume-chain query validation', () => {
     await expect(queryConsumeChains(client, { mountedTransactionId: uuidA, startId: uuidB })).rejects.toThrow(
       /mountedTransactionId cannot be combined with node filters/,
     );
+  });
+
+  it('rejects multiple consume-chain node selectors in the same mode before calling fetch', async () => {
+    const counted = createCountingClient();
+
+    await expect(queryConsumeChains(counted.client, { startId: uuidA, endId: uuidB })).rejects.toThrow(
+      /consume-chains requires exactly one node filter/,
+    );
+    await expect(queryConsumeChains(counted.client, { startPubkey: pubkeyA, nodePubkey: pubkeyB })).rejects.toThrow(
+      /consume-chains requires exactly one node filter/,
+    );
+
+    expect(counted.fetchCount()).toBe(0);
   });
 
   it('rejects consume-chain root selectors passed through pagination without calling fetch', async () => {
